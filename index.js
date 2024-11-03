@@ -9,12 +9,21 @@ const app = express(); //express 모듈을 사용하기 위해 app 변수에 할
 app.use(express.json()); //express 모듈의 json()메소드를 사용한다.
 app.use(cookieParser()); // 쿠키 파서 추가
 
-// 환경에 따른 CORS 설정
-const allowedOrigin = process.env.API_URL || 'http://localhost:3002'; // API_URL 환경변수 사용
+// 여러 origin을 허용하는 CORS 설정
+const allowedOrigins = [
+  'http://localhost:3002', // 로컬 환경
+  'http://222.112.27.120:3002', // 배포 환경
+];
 
 app.use(
   cors({
-    origin: allowedOrigin,
+    origin: function (origin, callback) {
+      if (allowedOrigins.includes(origin) || !origin) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   })
 );
