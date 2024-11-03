@@ -10,11 +10,11 @@ app.use(express.json()); //express 모듈의 json()메소드를 사용한다.
 app.use(cookieParser()); // 쿠키 파서 추가
 
 // 환경에 따른 CORS 설정
-const API_URL = process.env.API_URL; // API_URL 환경변수 사용
+const allowedOrigin = process.env.API_URL || 'http://localhost:3002'; // API_URL 환경변수 사용
 
 app.use(
   cors({
-    origin: API_URL, // 환경 변수로부터 API URL을 가져옴
+    origin: allowedOrigin,
     credentials: true,
   })
 );
