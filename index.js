@@ -1,3 +1,4 @@
+require('dotenv').config(); //.env 파일 사용 설정
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
@@ -9,14 +10,11 @@ app.use(express.json()); //express 모듈의 json()메소드를 사용한다.
 app.use(cookieParser()); // 쿠키 파서 추가
 
 // 환경에 따른 CORS 설정
-const allowedOrigin =
-  process.env.NODE_ENV === 'production'
-    ? process.env.CLIENT_URL // 배포 환경에서는 시크릿에서 받은 배포 URL 사용
-    : 'http://localhost:3002'; // 로컬 개발 환경에서는 localhost 사용
+const API_URL = process.env.API_URL; // API_URL 환경변수 사용
 
 app.use(
   cors({
-    origin: allowedOrigin,
+    origin: API_URL, // 환경 변수로부터 API URL을 가져옴
     credentials: true,
   })
 );
