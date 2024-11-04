@@ -23,6 +23,10 @@ app.get('/', (req, res) => {
 app.use(require('./routes/getRoutes'));
 app.use(require('./routes/postRoutes')); // postRoutes 경로 설정
 
+// community 라우트
+app.use('/community', require('./routes/getRoutes'));
+app.use('/community', require('./routes/postRoutes'));
+
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
