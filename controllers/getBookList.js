@@ -112,21 +112,27 @@ exports.getBookByCategory = async (req, res) => {
   try {
     // genre_tag_id가 제공되지 않을 경우 모든 책을 가져옴
     const query = `
-      SELECT 
-        book.book_id, book.book_title, book.book_cover, book.book_author,
-        book.book_publisher, book.genre_tag_name, book.isbn, 
-        book.book_description, book.book_price, book.publish_date,
-        book.genre_tag_id, book.is_book_best, book.book_status 
-      FROM 
-        book
-      WHERE 
-        ${genre_tag_id ? `book.genre_tag_id = $1` : 'true'}
-      ORDER BY 
-        (CASE WHEN book.book_author = '한강' THEN 1 ELSE 0 END) DESC, -- '한강' 저자 우선 출력
-        (CASE WHEN book.is_book_best = true THEN 1 ELSE 0 END) DESC, -- 베스트셀러 우선 출력
-        book.publish_date DESC                                        -- 최신 출판일 순으로 정렬
-      LIMIT $2 OFFSET $3
-    `;
+    SELECT 
+     b.*,
+      CASE 
+        WHEN AVG(br.rating) IS NULL THEN 0 
+        ELSE ROUND(AVG(br.rating), 1) 
+      END AS average_rating,  -- NULL일 때 0, 소수점 1자리로 표시
+      COUNT(br.rating) AS review_count -- 리뷰 개수
+    FROM 
+      book AS b
+    LEFT JOIN 
+      book_review AS br ON b.book_id = br.book_id -- book_review와 조인
+    WHERE 
+      ${genre_tag_id ? `b.genre_tag_id = $1` : 'true'}
+    GROUP BY 
+      b.book_id
+    ORDER BY 
+      (CASE WHEN b.book_author = '한강' THEN 1 ELSE 0 END) DESC, -- '한강' 저자 우선 출력
+      (CASE WHEN b.is_book_best = true THEN 1 ELSE 0 END) DESC, -- 베스트셀러 우선 출력
+      b.publish_date DESC                                       -- 최신 출판일 순으로 정렬
+    LIMIT $2 OFFSET $3
+  `;
 
     const params = genre_tag_id
       ? [genre_tag_id, limit, offset]
