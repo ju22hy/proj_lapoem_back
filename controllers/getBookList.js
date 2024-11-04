@@ -25,8 +25,11 @@ exports.getBookList = async (req, res) => {
         b.genre_tag_id,
         b.is_book_best,
         b.book_status,
-        ROUND(AVG(br.rating), 1) AS average_rating, -- 평균 평점(소수점 1자리)
-        COUNT(br.rating) AS review_count            -- 리뷰 개수
+        CASE 
+        WHEN AVG(br.rating) IS NULL THEN 0 
+        ELSE ROUND(AVG(br.rating), 1) 
+        END AS average_rating, -- NULL일 때는 0, 아닐 때는 소수점 1자리로 반올림
+        COUNT(br.rating) AS review_count  -- 리뷰 개수
       FROM book AS b
       LEFT JOIN book_review AS br ON b.book_id = br.book_id -- book_review 테이블과 조인
       WHERE b.book_status IS NOT false  -- book_status가 false인 책을 제외

@@ -18,8 +18,11 @@ const getBookDetail = async (req, res) => {
             b.book_title,
             b.book_author,
             b.genre_tag_name,
-            ROUND(AVG(br.rating), 1) AS average_rating, -- 소수점 1자리로 반올림
-            COUNT(br.rating) AS review_count
+            CASE 
+            WHEN AVG(br.rating) IS NULL THEN 0 
+            ELSE ROUND(AVG(br.rating), 1) 
+            END AS average_rating, -- NULL일 때는 0, 아닐 때는 소수점 1자리로 반올림
+            COUNT(br.rating) AS review_count  -- 리뷰 개수
         FROM 
             book AS b
         LEFT JOIN 
