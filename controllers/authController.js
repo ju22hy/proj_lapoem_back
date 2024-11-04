@@ -1,6 +1,6 @@
 // controllers/authController.js
 const database = require('../database/database');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 // 회원가입 함수
