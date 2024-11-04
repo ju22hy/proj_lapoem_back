@@ -18,13 +18,15 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: function (origin, callback) {
+      // 요청의 origin이 허용된 목록에 포함되거나 origin이 비어 있을 경우 허용
       if (allowedOrigins.includes(origin) || !origin) {
         callback(null, true);
       } else {
-        callback(new Error('Not allowed by CORS'));
+        console.error(`Blocked by CORS: ${origin}`); // 차단된 origin 로그 출력
+        callback(null, false); // callback에 `null, false`를 전달하여 차단
       }
     },
-    credentials: true,
+    credentials: true, // 쿠키 허용
   })
 );
 

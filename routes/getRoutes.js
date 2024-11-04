@@ -1,4 +1,5 @@
-const router = require('express').Router();
+const express = require('express');
+const router = express.Router();
 const {
   getBookList,
   getBookByCategory,
@@ -6,6 +7,7 @@ const {
 } = require('../controllers/getBookList');
 const { getSearchBooks } = require('../controllers/getSearchBooks');
 const { verifyToken } = require('../controllers/authController');
+const { getNewBook } = require('../controllers/getNewBook');
 const {
   getCommunityPosts,
   getCommunityPostById,
@@ -17,8 +19,9 @@ router.get('/community/:postId', getCommunityPostById);
 router.get('/search-books', getSearchBooks);
 router.get('/search-category', getBookByCategory);
 router.get('/all-categories', getAllCategories);
+router.get('/new-book', getNewBook);
 
 // 토큰 검증 라우트
 router.get('/verify', verifyToken);
 
-module.exports = router; // router 모듈 내보내기
+module.exports = router;
