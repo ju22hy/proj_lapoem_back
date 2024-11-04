@@ -16,7 +16,7 @@ exports.getNewBook = async (req, res) => {
       LEFT JOIN 
         book_review ON book.book_id = book_review.book_id      -- LEFT JOIN을 사용해 리뷰가 없는 책도 포함
       WHERE 
-        book.book_status IS NOT NULL                           -- 상태가 NULL이 아닌 책만 포함
+        AND book.publish_date IS NOT NULL
       GROUP BY 
         book.book_id, book.book_cover, book.book_title, book.book_author, book.book_publisher
       ORDER BY 
