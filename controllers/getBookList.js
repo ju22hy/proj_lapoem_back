@@ -64,7 +64,7 @@ exports.getBookList = async (req, res) => {
   }
 };
 
-// 북 카테고리----------------------------------------------------------------
+// 북의 카테고리----------------------------------------------------------------
 exports.getAllCategories = async (req, res) => {
   try {
     // book_category 테이블의 모든 카테고리 정보를 가져옴
@@ -84,7 +84,7 @@ exports.getAllCategories = async (req, res) => {
   }
 };
 
-// 카테고리 조회 API----------------------------------------------------
+// 책을 카테고리별로 조회하는 API----------------------------------------------------
 exports.getBookByCategory = async (req, res) => {
   const { genre_tag_id = '', page = 1 } = req.query; // 카테고리 ID와 페이지 수 가져오기
   const limit = 10; // 한 페이지에 표시할 도서 수
@@ -100,11 +100,6 @@ exports.getBookByCategory = async (req, res) => {
         book.genre_tag_id, book.is_book_best, book.book_status 
       FROM 
         book
-      ${
-        genre_tag_id
-          ? `JOIN book_category ON book.genre_tag_id = book_category.genre_tag_id`
-          : ''
-      }
       WHERE 
         ${genre_tag_id ? `book.genre_tag_id = $1` : 'true'}
       ORDER BY 
@@ -122,7 +117,7 @@ exports.getBookByCategory = async (req, res) => {
     // 총 도서 개수를 가져오는 쿼리
     const countQuery = `
       SELECT COUNT(*) FROM book
-      ${genre_tag_id ? 'WHERE genre_tag_id = $1' : ''}
+      ${genre_tag_id ? 'WHERE book.genre_tag_id = $1' : ''}
     `;
     const countParams = genre_tag_id ? [genre_tag_id] : []; // 파라미터 설정
     const { rows: countResult } = await database.query(countQuery, countParams);
