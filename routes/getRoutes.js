@@ -6,10 +6,14 @@ const {
 } = require('../controllers/getBookList');
 const { getSearchBooks } = require('../controllers/getSearchBooks');
 const { verifyToken } = require('../controllers/authController');
-const communityController = require('../controllers/communityController');
+const {
+  getCommunityPosts,
+  getCommunityPostById,
+} = require('../controllers/communityController');
 
 router.get('/book-list', getBookList);
-router.get('/community', communityController.getCommunityPosts);
+router.get('/community', getCommunityPosts);
+router.get('/community/:postId', getCommunityPostById);
 router.get('/search-books', getSearchBooks);
 router.get('/search-category', getBookByCategory);
 router.get('/all-categories', getAllCategories);
