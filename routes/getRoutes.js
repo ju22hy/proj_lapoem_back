@@ -7,8 +7,8 @@ const {
 } = require("../controllers/getBookList");
 const { getSearchBooks } = require("../controllers/getSearchBooks");
 const { verifyToken } = require("../controllers/authController");
-const { getNewBook } = require("../controllers/getNewBook");
 const communityController = require("../controllers/communityController");
+const { getNewBook } = require("../controllers/getNewBook");
 
 router.get("/book-list", getBookList);
 router.get("/community", communityController.getCommunityPosts);
