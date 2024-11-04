@@ -11,9 +11,25 @@ exports.getBookList = async (req, res) => {
 
     // 기본 쿼리와 조건 설정
     let query = `
-      SELECT book_id, book_title,book_cover, book_author,book_publisher, genre_tag_name, isbn, book_description, book_price, publish_date,genre_tag_id,is_book_best,book_status
-      FROM book
-      WHERE book_status IS NOT false  -- book_status가 false인 책을 제외
+      SELECT 
+        b.book_id,
+        b.book_title,
+        b.book_cover,
+        b.book_author,
+        b.book_publisher,
+        b.genre_tag_name,
+        b.isbn,
+        b.book_description,
+        b.book_price,
+        b.publish_date,
+        b.genre_tag_id,
+        b.is_book_best,
+        b.book_status,
+        ROUND(AVG(br.rating), 1) AS average_rating, -- 평균 평점(소수점 1자리)
+        COUNT(br.rating) AS review_count            -- 리뷰 개수
+      FROM book AS b
+      LEFT JOIN book_review AS br ON b.book_id = br.book_id -- book_review 테이블과 조인
+      WHERE b.book_status IS NOT false  -- book_status가 false인 책을 제외
     `;
 
     // 카테고리 필터가 있을 경우 WHERE 조건 추가
@@ -23,13 +39,13 @@ exports.getBookList = async (req, res) => {
 
     // 정렬 및 페이징 추가
     query += `
+    GROUP BY b.book_id
     ORDER BY 
-      CASE WHEN book_author = '한강' THEN 1 ELSE 0 END DESC,          -- '한강' 저자 우선 출력
-      CASE WHEN is_book_best = true THEN 1 ELSE 0 END DESC,           -- 베스트셀러인 책 우선 출력
-      CASE WHEN genre_tag_name = '한국 소설' THEN 1 ELSE 0 END DESC,  -- '한국 소설' 우선 출력
-      CASE WHEN is_book_best = true THEN 1 ELSE 0 END DESC,           -- 베스트셀러인 책 우선 출력
+      CASE WHEN b.book_author = '한강' THEN 1 ELSE 0 END DESC,          -- '한강' 저자 우선 출력
+      CASE WHEN b.is_book_best = true THEN 1 ELSE 0 END DESC,           -- 베스트셀러인 책 우선 출력
+      CASE WHEN b.genre_tag_name = '한국 소설' THEN 1 ELSE 0 END DESC,  -- '한국 소설' 우선 출력
       publish_date DESC,                                              -- 최신 출판일 우선 출력
-      genre_tag_id ASC                                                 -- 그다음으로 장르 ID 순으로 정렬
+      b.genre_tag_id ASC                                             -- 그다음으로 장르 ID 순으로 정렬
     LIMIT $1 OFFSET $2
   `;
 
