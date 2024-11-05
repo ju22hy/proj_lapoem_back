@@ -56,27 +56,43 @@ exports.createCommunityPost = async (req, res) => {
   const { member_num, post_title, post_content, post_status, visibility } =
     req.body;
 
+  console.log('Received post data on server:', {
+    member_num,
+    post_title,
+    post_content,
+    post_status,
+    visibility,
+  });
+
+  // 유효성 검증
   if (!member_num) {
+    console.error('Error: member_num is missing');
     return res
       .status(400)
       .json({ message: '작성자 정보(member_num)가 누락되었습니다.' });
   }
   if (!post_title) {
+    console.error('Error: post_title is missing');
     return res.status(400).json({ message: '제목을 입력해야 합니다.' });
   }
   if (!post_content) {
+    console.error('Error: post_content is missing');
     return res.status(400).json({ message: '내용을 입력해야 합니다.' });
   }
 
   // post_status와 visibility 값 검증
   const validStatuses = ['active', 'inactive'];
   if (post_status && !validStatuses.includes(post_status)) {
+    console.error(`Error: Invalid post_status value - ${post_status}`);
     return res
       .status(400)
       .json({ message: `유효하지 않은 상태 값입니다: ${post_status}` });
   }
 
-  if (visibility !== true && visibility !== false) {
+  if (typeof visibility !== 'boolean') {
+    console.error(
+      `Error: visibility must be true or false, received: ${visibility}`
+    );
     return res
       .status(400)
       .json({ message: 'visibility 필드는 true 또는 false여야 합니다.' });
@@ -87,10 +103,16 @@ exports.createCommunityPost = async (req, res) => {
       'INSERT INTO community (member_num, post_title, post_content, post_created_at, post_status, visibility) VALUES ($1, $2, $3, NOW(), $4, $5) RETURNING *',
       [member_num, post_title, post_content, post_status, visibility]
     );
-    res.status(201).json(result.rows[0]);
+
+    if (result.rows.length > 0) {
+      console.log('Post created successfully:', result.rows[0]);
+      return res.status(201).json(result.rows[0]); // 게시글 생성 성공 시 JSON 응답과 상태 코드 201 반환
+    } else {
+      throw new Error('게시글 생성 결과가 없습니다.');
+    }
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: '게시글 생성에 실패했습니다.' });
+    console.error('Database error:', error);
+    return res.status(500).json({ message: '게시글 생성에 실패했습니다.' });
   }
 };
 
