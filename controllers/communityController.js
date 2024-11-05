@@ -5,12 +5,13 @@ exports.getCommunityPosts = async (req, res) => {
   try {
     // 문자열로 받은 visibility를 불리언으로 변환
     const visibility = req.query.visibility === 'true';
+    const member_num = req.query.member_num;
 
     // 쿼리 로그
     console.log('Visibility parameter received:', visibility);
+    console.log('Member number received:', member_num);
 
-    const result = await pool.query(
-      `
+    let query = `
       SELECT 
         community.posts_id, 
         community.post_title, 
@@ -29,11 +30,18 @@ exports.getCommunityPosts = async (req, res) => {
         community.post_deleted_at IS NULL
       AND 
         community.visibility = $1
-      ORDER BY 
-        community.post_created_at DESC
-      `,
-      [visibility]
-    );
+    `;
+    let queryParams = [visibility];
+
+    // Only me 요청일 경우, member_num 추가 필터링
+    if (!visibility && member_num) {
+      query += ' AND community.member_num = $2';
+      queryParams.push(member_num);
+    }
+
+    query += ' ORDER BY community.post_created_at DESC';
+
+    const result = await pool.query(query, queryParams);
 
     console.log('Query result:', result.rows); // 쿼리 결과 로그
     res.status(200).json(result.rows);
