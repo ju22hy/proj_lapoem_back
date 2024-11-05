@@ -48,10 +48,10 @@ exports.loginUser = async (req, res) => {
     const { member_id, member_password } = req.body;
     const { rows } = await database.query('SELECT * FROM member WHERE member_id = $1', [member_id]);
 
-    if (!rows.length) return res.status(404).json({ message: 'User not found' });
+    if (!rows.length) return res.status(404).json({ message: '아이디 및 비밀번호를 확인해주세요' });
 
     const isValidPassword = await bcrypt.compare(member_password, rows[0].member_password);
-    if (!isValidPassword) return res.status(401).json({ message: 'Password not matched' });
+    if (!isValidPassword) return res.status(401).json({ message: '아이디 및 비밀번호를 확인해주세요' });
 
     // JWT 토큰 생성
     const user = {
