@@ -9,7 +9,7 @@ exports.getNewBook = async (req, res) => {
         book.book_title, 
         book.book_author, 
         book.book_publisher, 
-        COALESCE(AVG(book_review.rating), 0) AS average_rating,  -- 평균 별점, 리뷰 없으면 0
+        ROUND(COALESCE(AVG(book_review.rating), 0), 1) AS average_rating,  -- 평균 별점, 리뷰 없으면 0
         COUNT(book_review.review_num) AS review_count           -- 리뷰 개수
       FROM 
         book
