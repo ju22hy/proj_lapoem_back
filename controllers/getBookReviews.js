@@ -12,9 +12,11 @@ const getBookReviews = async (req, res) => {
     // 특정 책에 대한 리뷰와 작성자 정보를 가져오기 위한 쿼리
     const query = `
       SELECT 
+        r.review_num,
         r.review_content,
         r.rating,
         to_char(r.review_created_at, 'DD.MM.YY (HH24:MI)') AS review_created_at,
+        m.member_num,
         m.member_nickname,
         m.member_gender,
         to_char(m.member_birth_date, 'DD.MM.YY') AS member_birth_date

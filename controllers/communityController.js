@@ -343,3 +343,89 @@ exports.deleteCommunityPost = async (req, res) => {
     res.status(500).json({ message: '게시글 삭제에 실패했습니다.' });
   }
 };
+
+// 사용자 게시물 및 댓글 수 가져오기
+exports.getUserStats = async (req, res) => {
+  const { member_num } = req.query;
+
+  console.log('Received member_num:', member_num); // 추가 로그
+
+  if (!member_num) {
+    return res
+      .status(400)
+      .set('Content-Type', 'application/json')
+      .json({ message: 'member_num이 누락되었습니다.' });
+  }
+
+  try {
+    const postsResult = await pool.query(
+      `SELECT COUNT(*) AS total_posts FROM community WHERE member_num = $1 AND post_deleted_at IS NULL`,
+      [member_num]
+    );
+
+    const commentsResult = await pool.query(
+      `SELECT COUNT(*) AS total_comments FROM community_comment WHERE member_num = $1 AND comment_deleted_at IS NULL`,
+      [member_num]
+    );
+
+    const totalPosts = postsResult.rows[0]?.total_posts ?? 0;
+    const totalComments = commentsResult.rows[0]?.total_comments ?? 0;
+
+    res.status(200).set('Content-Type', 'application/json').json({
+      total_posts: totalPosts,
+      total_comments: totalComments,
+    });
+
+    console.log('User stats sent:', {
+      total_posts: totalPosts,
+      total_comments: totalComments,
+    });
+  } catch (error) {
+    console.error('Error fetching user stats:', error);
+    res
+      .status(500)
+      .set('Content-Type', 'application/json')
+      .json({ message: '사용자 통계를 불러오지 못했습니다.' });
+  }
+};
+
+// 오늘 댓글이 가장 많이 달린 게시물 가져오기
+exports.getHotTopics = async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT community.posts_id, community.post_title, COUNT(community_comment.comment_id) AS comment_count
+      FROM community
+      LEFT JOIN community_comment ON community.posts_id = community_comment.posts_id
+      WHERE community_comment.comment_created_at >= CURRENT_DATE
+      AND community.post_deleted_at IS NULL
+      GROUP BY community.posts_id, community.post_title
+      ORDER BY comment_count DESC
+      LIMIT 3
+    `);
+
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error('Error fetching hot topics:', error);
+    res.status(500).json({ message: '핫토픽을 불러오지 못했습니다.' });
+  }
+};
+
+// 가장 많은 게시물을 올린 사용자 가져오기
+exports.getTopUsers = async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT member.member_nickname, COUNT(community.posts_id) AS post_count
+      FROM member
+      JOIN community ON member.member_num = community.member_num
+      WHERE community.post_deleted_at IS NULL
+      GROUP BY member.member_nickname
+      ORDER BY post_count DESC
+      LIMIT 3
+    `);
+
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error('Error fetching top users:', error);
+    res.status(500).json({ message: '사용자 정보를 불러오지 못했습니다.' });
+  }
+};
