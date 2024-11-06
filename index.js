@@ -36,8 +36,10 @@ app.get('/', (req, res) => {
   res.send('Hello, World!');
 });
 
-app.use(require('./routes/getRoutes')); // getRoutes 경로 설정
-app.use(require('./routes/postRoutes')); // postRoutes 경로 설정
+app.use(require('./routes/getRoutes'));
+app.use(require('./routes/postRoutes'));
+app.use(require('./routes/deleteRoutes'));
+app.use(require('./routes/patchRoutes'));
 
 // community 라우트
 app.use('/community', require('./routes/getRoutes'));

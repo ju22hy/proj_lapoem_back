@@ -213,6 +213,7 @@ exports.getCommentsByPostId = async (req, res) => {
         community_comment.comment_content, 
         community_comment.comment_created_at, 
         community_comment.comment_status,
+        community_comment.member_num,
         member.member_nickname,
         member.member_email
       FROM 
@@ -236,5 +237,109 @@ exports.getCommentsByPostId = async (req, res) => {
   } catch (error) {
     console.error('Error fetching comments:', error);
     res.status(500).json({ message: '댓글을 불러오지 못했습니다.' });
+  }
+};
+
+// 댓글 삭제하기
+exports.deleteComment = async (req, res) => {
+  const { commentId } = req.params;
+
+  try {
+    const result = await pool.query(
+      `
+      UPDATE community_comment 
+      SET comment_deleted_at = NOW(), comment_status = 'deleted'
+      WHERE comment_id = $1
+      `,
+      [commentId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: '댓글을 찾을 수 없습니다.' });
+    }
+
+    res.status(200).json({ message: '댓글이 삭제되었습니다.' });
+  } catch (error) {
+    console.error('Error deleting comment:', error);
+    res.status(500).json({ message: '댓글 삭제에 실패했습니다.' });
+  }
+};
+
+// 게시글 수정하기
+exports.updateCommunityPost = async (req, res) => {
+  const { postId } = req.params;
+  const { post_title, post_content } = req.body;
+
+  try {
+    const fieldsToUpdate = [];
+    const values = [];
+
+    if (post_title) {
+      fieldsToUpdate.push('post_title = $' + (fieldsToUpdate.length + 1));
+      values.push(post_title);
+    }
+
+    if (post_content) {
+      fieldsToUpdate.push('post_content = $' + (fieldsToUpdate.length + 1));
+      values.push(post_content);
+    }
+
+    if (fieldsToUpdate.length === 0) {
+      return res
+        .status(400)
+        .json({ message: '수정할 필드를 제공해야 합니다.' });
+    }
+
+    const query = `
+      UPDATE community
+      SET ${fieldsToUpdate.join(', ')}, post_updated_at = NOW()
+      WHERE posts_id = $${fieldsToUpdate.length + 1} AND post_deleted_at IS NULL
+      RETURNING *
+    `;
+    values.push(postId);
+
+    const result = await pool.query(query, values);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: '게시글을 찾을 수 없습니다.' });
+    }
+
+    res.status(200).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating community post:', error);
+    res.status(500).json({ message: '게시글 수정에 실패했습니다.' });
+  }
+};
+
+// 게시글 삭제하기
+exports.deleteCommunityPost = async (req, res) => {
+  const { postId } = req.params;
+
+  try {
+    // 1. 댓글 상태와 소프트 삭제 업데이트
+    await pool.query(
+      `UPDATE community_comment
+       SET comment_deleted_at = NOW(), comment_status = 'deleted'
+       WHERE posts_id = $1 AND comment_deleted_at IS NULL`,
+      [postId]
+    );
+
+    // 2. 게시글 상태와 소프트 삭제 업데이트
+    const result = await pool.query(
+      `UPDATE community
+       SET post_deleted_at = NOW(), post_status = 'deleted'
+       WHERE posts_id = $1 AND post_deleted_at IS NULL
+       RETURNING *`,
+      [postId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: '게시글을 찾을 수 없습니다.' });
+    }
+
+    res.status(200).json({ message: '게시글과 관련된 댓글이 삭제되었습니다.' });
+  } catch (error) {
+    console.error('Error deleting community post:', error);
+    res.status(500).json({ message: '게시글 삭제에 실패했습니다.' });
   }
 };
