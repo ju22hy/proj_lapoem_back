@@ -17,7 +17,10 @@ const {
   getCommunityPosts,
   getCommunityPostById,
   getCommentsByPostId,
+  getHotTopics,
+  getTopUsers,
 } = require('../controllers/communityController');
+const { getUserStats } = require('../controllers/communityController');
 
 // get Url
 router.get('/book-list', getBookList);
@@ -26,6 +29,9 @@ router.get('/book-list/:bookId/reviews', getBookReviews);
 router.get('/community', getCommunityPosts);
 router.get('/community/:postId', getCommunityPostById);
 router.get('/community/:postId/comments', getCommentsByPostId);
+router.get('/user/stats', getUserStats);
+router.get('/hot-topics', getHotTopics);
+router.get('/top-users', getTopUsers);
 router.get('/search-books', getSearchBooks);
 router.get('/search-category', getBookByCategory);
 router.get('/all-categories', getAllCategories);
