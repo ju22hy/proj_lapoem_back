@@ -155,3 +155,86 @@ exports.getCommunityPostById = async (req, res) => {
     res.status(500).json({ message: '게시글을 불러오지 못했습니다.' });
   }
 };
+
+// 댓글 저장하기
+exports.createComment = async (req, res) => {
+  const { posts_id, member_num, comment_content } = req.body;
+
+  console.log('Received comment data on server:', {
+    posts_id,
+    member_num,
+    comment_content,
+  });
+
+  // 유효성 검증
+  if (!posts_id) {
+    console.error('Error: posts_id is missing');
+    return res.status(400).json({ message: '게시글 ID가 누락되었습니다.' });
+  }
+  if (!member_num) {
+    console.error('Error: member_num is missing');
+    return res
+      .status(400)
+      .json({ message: '작성자 정보(member_num)가 누락되었습니다.' });
+  }
+  if (!comment_content) {
+    console.error('Error: comment_content is missing');
+    return res.status(400).json({ message: '댓글 내용을 입력해야 합니다.' });
+  }
+
+  try {
+    const result = await pool.query(
+      'INSERT INTO community_comment (posts_id, member_num, comment_content, comment_created_at, comment_status) VALUES ($1, $2, $3, NOW(), $4) RETURNING *',
+      [posts_id, member_num, comment_content, 'active']
+    );
+
+    if (result.rows.length > 0) {
+      console.log('Comment created successfully:', result.rows[0]);
+      return res.status(201).json(result.rows[0]); // 댓글 생성 성공 시 JSON 응답과 상태 코드 201 반환
+    } else {
+      throw new Error('댓글 생성 결과가 없습니다.');
+    }
+  } catch (error) {
+    console.error('Database error:', error);
+    return res.status(500).json({ message: '댓글 생성에 실패했습니다.' });
+  }
+};
+
+// 특정 게시글의 댓글 목록 가져오기
+exports.getCommentsByPostId = async (req, res) => {
+  const { postId } = req.params;
+
+  try {
+    const result = await pool.query(
+      `
+      SELECT 
+        community_comment.comment_id, 
+        community_comment.posts_id, 
+        community_comment.comment_content, 
+        community_comment.comment_created_at, 
+        community_comment.comment_status,
+        member.member_nickname,
+        member.member_email
+      FROM 
+        community_comment
+      JOIN 
+        member ON community_comment.member_num = member.member_num
+      WHERE 
+        community_comment.posts_id = $1 
+        AND community_comment.comment_deleted_at IS NULL
+      ORDER BY 
+        community_comment.comment_created_at ASC
+      `,
+      [postId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: '댓글이 없습니다.' });
+    }
+
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error('Error fetching comments:', error);
+    res.status(500).json({ message: '댓글을 불러오지 못했습니다.' });
+  }
+};

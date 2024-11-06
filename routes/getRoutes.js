@@ -16,6 +16,7 @@ const { getBestBook } = require('../controllers/getBestBook');
 const {
   getCommunityPosts,
   getCommunityPostById,
+  getCommentsByPostId,
 } = require('../controllers/communityController');
 
 // get Url
@@ -24,6 +25,7 @@ router.get('/book-list/:bookId', getBookDetail);
 router.get('/book-list/:bookId/reviews', getBookReviews);
 router.get('/community', getCommunityPosts);
 router.get('/community/:postId', getCommunityPostById);
+router.get('/community/:postId/comments', getCommentsByPostId);
 router.get('/search-books', getSearchBooks);
 router.get('/search-category', getBookByCategory);
 router.get('/all-categories', getAllCategories);

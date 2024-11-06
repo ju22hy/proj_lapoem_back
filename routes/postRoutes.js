@@ -20,6 +20,8 @@ router.post('/login', loginUser);
 router.post('/logout', logoutUser); // 추가된 부분
 // 커뮤니티 생성 라우트 설정
 router.post('/community', communityController.createCommunityPost);
+// 커뮤니티 댓글 생성 라우트 설정
+router.post('/community/comment', communityController.createComment);
 // 베스트셀러 등록
 router.post('/register-best', registerBestSeller);
 // 책 리뷰 작성
