@@ -9,6 +9,8 @@ const {
 } = require('../controllers/getBookList');
 const getBookDetail = require('../controllers/getBookDetail');
 const { getBookReviews } = require('../controllers/getBookReviews');
+const { getBookReviewById } = require('../controllers/getReviewById');
+
 const { getSearchBooks } = require('../controllers/getSearchBooks');
 const { verifyToken } = require('../controllers/authController');
 const { getNewBook } = require('../controllers/getNewBook');
@@ -23,6 +25,7 @@ const {
 router.get('/book-list', getBookList);
 router.get('/book-list/:bookId', getBookDetail);
 router.get('/book-list/:bookId/reviews', getBookReviews);
+router.get('/book-list/:bookId/reviews/:reviewId', getBookReviewById);
 router.get('/community', getCommunityPosts);
 router.get('/community/:postId', getCommunityPostById);
 router.get('/community/:postId/comments', getCommentsByPostId);
