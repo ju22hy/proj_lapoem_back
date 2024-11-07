@@ -10,7 +10,7 @@ const { registerBestSeller } = require("../controllers/postBestBook");
 const {
   postBookReview,
   verifyToken,
-} = require("../controllers/postBookReview");
+} = require("../controllers/BookDetailController");
 const { createThread } = require("../controllers/threadController");
 
 // 회원가입 라우트 설정

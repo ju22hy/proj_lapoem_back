@@ -7,11 +7,11 @@ const {
   getBookByCategory,
   getAllCategories,
 } = require("../controllers/getBookList");
-const getBookDetail = require("../controllers/getBookDetail");
 const {
+  getBookDetail,
   getBookReviews,
-  getReviewById,
-} = require("../controllers/getBookReviews");
+} = require("../controllers/BookDetailController");
+// const { getBookReviews } = require('../controllers/getBookReviews');
 
 const { getSearchBooks } = require("../controllers/getSearchBooks");
 const { verifyToken } = require("../controllers/authController");
@@ -34,7 +34,6 @@ const {
 router.get("/book-list", getBookList);
 router.get("/book-list/:bookId", getBookDetail);
 router.get("/book-list/:bookId/reviews", getBookReviews);
-router.get("/book-list/:bookId/reviews/:reviewId", getReviewById);
 router.get("/community", getCommunityPosts);
 router.get("/community/:postId", getCommunityPostById);
 router.get("/community/:postId/comments", getCommentsByPostId);
@@ -48,6 +47,7 @@ router.get("/new-book", getNewBook);
 router.get("/best-book", getBestBook);
 router.get("/threads", getThreads);
 router.get("/threads/exists/:book_id", checkThreadExistence);
+
 // 토큰 검증 라우트
 router.get("/verify", verifyToken);
 
