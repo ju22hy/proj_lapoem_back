@@ -21,16 +21,20 @@ exports.getCommunityPosts = async (req, res) => {
         community.visibility,
         community.member_num,
         member.member_nickname,
-        member.member_email
+        member.member_email,
+        COUNT(community_comment.comment_id) AS comments_count
       FROM 
         community
       JOIN 
         member ON community.member_num = member.member_num
+      LEFT JOIN 
+        community_comment ON community_comment.posts_id = community.posts_id AND community_comment.comment_deleted_at IS NULL
       WHERE 
         community.post_deleted_at IS NULL
       AND 
         community.visibility = $1
     `;
+
     let queryParams = [visibility];
 
     // Only me 요청일 경우, member_num 추가 필터링
@@ -39,7 +43,19 @@ exports.getCommunityPosts = async (req, res) => {
       queryParams.push(member_num);
     }
 
-    query += ' ORDER BY community.post_created_at DESC';
+    query += `
+      GROUP BY 
+        community.posts_id, 
+        community.post_title, 
+        community.post_content, 
+        community.post_created_at, 
+        community.post_status, 
+        community.visibility, 
+        community.member_num, 
+        member.member_nickname, 
+        member.member_email
+      ORDER BY community.post_created_at DESC
+    `;
 
     const result = await pool.query(query, queryParams);
 
@@ -132,15 +148,20 @@ exports.getCommunityPostById = async (req, res) => {
         community.visibility,
         community.member_num,
         member.member_nickname,
-        member.member_email
+        member.member_email,
+        COUNT(community_comment.comment_id) AS comments_count
       FROM 
         community
       JOIN 
         member ON community.member_num = member.member_num
+      LEFT JOIN 
+        community_comment ON community_comment.posts_id = community.posts_id AND community_comment.comment_deleted_at IS NULL
       WHERE 
         community.posts_id = $1
       AND 
         community.post_deleted_at IS NULL
+      GROUP BY 
+        community.posts_id, member.member_nickname, member.member_email
       `,
       [postId]
     );
