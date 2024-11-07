@@ -7,7 +7,7 @@ const {
   getBookByCategory,
   getAllCategories,
 } = require('../controllers/getBookList');
-const getBookDetail = require('../controllers/getBookDetail');
+const getBookDetail = require('../controllers/BookDetailController');
 const { getBookReviews } = require('../controllers/getBookReviews');
 
 const { getSearchBooks } = require('../controllers/getSearchBooks');
