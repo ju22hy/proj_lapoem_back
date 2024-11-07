@@ -1,4 +1,9 @@
-﻿-- member 테이블 생성
+﻿-- 자주 사용하는 qury문
+SELECT * FROM 테이블
+SELECT 컬럼 FROM 테이블
+SELECT * FROM 테이블 WHERE 컬럼 = '값'
+
+-- member 테이블 생성
 CREATE TABLE member (
     member_num SERIAL PRIMARY KEY,
     member_id VARCHAR(50) NOT NULL,

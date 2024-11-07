@@ -26,10 +26,10 @@ exports.getBookList = async (req, res) => {
         b.is_book_best,
         b.book_status,
         CASE 
-        WHEN AVG(br.rating) IS NULL THEN 0 
-        ELSE ROUND(AVG(br.rating), 1) 
+        WHEN AVG(CASE WHEN br.review_status = 'active' THEN br.rating END) IS NULL THEN 0 
+        ELSE ROUND(AVG(CASE WHEN br.review_status = 'active' THEN br.rating END), 1) 
         END AS average_rating, -- NULL일 때는 0, 아닐 때는 소수점 1자리로 반올림
-        COUNT(br.rating) AS review_count  -- 리뷰 개수
+        COUNT(CASE WHEN br.review_status = 'active' THEN br.rating END) AS review_count   -- 리뷰 개수
       FROM book AS b
       LEFT JOIN book_review AS br ON b.book_id = br.book_id -- book_review 테이블과 조인
       WHERE b.book_status IS NOT false  -- book_status가 false인 책을 제외
@@ -115,10 +115,10 @@ exports.getBookByCategory = async (req, res) => {
     SELECT 
      b.*,
       CASE 
-        WHEN AVG(br.rating) IS NULL THEN 0 
-        ELSE ROUND(AVG(br.rating), 1) 
+        WHEN AVG(CASE WHEN br.review_status = 'active' THEN br.rating END) IS NULL THEN 0 
+        ELSE ROUND(AVG(CASE WHEN br.review_status = 'active' THEN br.rating END), 1) 
       END AS average_rating,  -- NULL일 때 0, 소수점 1자리로 표시
-      COUNT(br.rating) AS review_count -- 리뷰 개수
+      COUNT(CASE WHEN br.review_status = 'active' THEN br.rating END) AS review_count -- 리뷰 개수
     FROM 
       book AS b
     LEFT JOIN 
