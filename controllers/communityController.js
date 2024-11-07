@@ -59,7 +59,7 @@ exports.getCommunityPosts = async (req, res) => {
 
     const result = await pool.query(query, queryParams);
 
-    console.log('Query result:', result.rows); // 쿼리 결과 로그
+    console.log('Query result:', result.rows);
     res.status(200).json(result.rows);
   } catch (error) {
     console.error('Error fetching community posts:', error);
