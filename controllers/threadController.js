@@ -74,13 +74,13 @@ exports.getThreads = async (req, res) => {
   try {
     // 모든 스레드 가져오기
     const getThreadsQuery = `
-      SELECT t.thread_num, t.book_id, b.book_title, b.book_author, b.book_publisher, 
-            COUNT(tm.member_num) AS participant_count
-      FROM thread t
-      LEFT JOIN book b ON t.book_id = b.book_id
-      LEFT JOIN thread_main tm ON t.thread_num = tm.thread_num
-      WHERE t.thread_status = true
-      GROUP BY t.thread_num, t.book_id, b.book_title, b.book_author, b.book_publisher
+      SELECT thread.thread_num, thread.book_id, book.book_title, book.book_author, book.book_publisher, 
+            COUNT(thread_main.member_num) AS participant_count
+      FROM thread
+      LEFT JOIN book ON thread.book_id = book.book_id
+      LEFT JOIN thread_main ON thread.thread_num = thread_main.thread_num
+      WHERE thread.thread_status = true
+      GROUP BY thread.thread_num, thread.book_id, book.book_title, book.book_author, book.book_publisher
     `;
     const threadsResult = await database.query(getThreadsQuery);
     const threadsWithParticipants = threadsResult.rows;
@@ -89,5 +89,43 @@ exports.getThreads = async (req, res) => {
   } catch (error) {
     console.error("Error fetching threads:", error);
     res.status(500).json({ message: "스레드 목록 조회에 실패했습니다." });
+  }
+};
+
+// 스레드 검색 기능
+exports.searchThreads = async (req, res) => {
+  try {
+    const { query } = req.query;
+
+    // 검색 쿼리 설정
+    const searchCondition = query
+      ? `WHERE (book.book_title ILIKE '%' || $1 || '%' OR book.book_author ILIKE '%' || $1 || '%') 
+        AND thread.thread_status = true`
+      : `WHERE thread.thread_status = true`;
+
+    const searchQuery = `
+      SELECT thread.thread_num, thread.book_id, book.book_title, book.book_author, 
+            book.book_publisher, book.book_cover, COUNT(thread_main.member_num) AS participant_count
+      FROM book
+      LEFT JOIN thread ON book.book_id = thread.book_id
+      LEFT JOIN thread_main ON thread.thread_num = thread_main.thread_num
+      ${searchCondition}
+      GROUP BY thread.thread_num, book.book_id, book.book_title, book.book_author, 
+              book.book_publisher, book.book_cover
+    `;
+
+    // 파라미터가 있는 경우와 없는 경우를 구분하여 쿼리 실행
+    const result = query
+      ? await database.query(searchQuery, [query])
+      : await database.query(searchQuery);
+
+    if (result.rows.length === 0) {
+      return res.status(200).json({ message: "해당 책의 스레드가 없습니다." });
+    }
+
+    res.status(200).json({ threads: result.rows });
+  } catch (error) {
+    console.error("Error searching threads:", error);
+    res.status(500).json({ message: "스레드 검색 중 오류가 발생했습니다." });
   }
 };

@@ -28,6 +28,7 @@ const { getUserStats } = require("../controllers/communityController");
 const {
   getThreads,
   checkThreadExistence,
+  searchThreads,
 } = require("../controllers/threadController");
 
 // get Url
@@ -47,6 +48,7 @@ router.get("/new-book", getNewBook);
 router.get("/best-book", getBestBook);
 router.get("/threads", getThreads);
 router.get("/threads/exists/:book_id", checkThreadExistence);
+router.get("/search-threads", searchThreads);
 
 // 토큰 검증 라우트
 router.get("/verify", verifyToken);
