@@ -1,11 +1,11 @@
 // controllers/threadController.js
 const database = require("../database/database"); // database 객체가 제대로 연결되어 있어야 합니다
 
+// 스레드가 이미 존재하는지 확인
 exports.checkThreadExistence = async (req, res) => {
   try {
     const { book_id } = req.params;
 
-    // 스레드가 이미 존재하는지 확인
     const threadExists = await database.query(
       "SELECT * FROM thread WHERE book_id = $1",
       [book_id]
@@ -22,6 +22,7 @@ exports.checkThreadExistence = async (req, res) => {
   }
 };
 
+// 스레드 생성
 exports.createThread = async (req, res) => {
   try {
     const { book_id, member_num, thread_content } = req.body;
@@ -70,38 +71,123 @@ exports.createThread = async (req, res) => {
   }
 };
 
+// 스레드 목록 가져오기
 exports.getThreads = async (req, res) => {
+  // console.log("getThreads API 호출됨");
+
   try {
-    // 모든 스레드 가져오기
-    const getThreadsQuery = `
-      SELECT thread.thread_num, thread.book_id, book.book_title, book.book_author, book.book_publisher, 
-            COUNT(thread_main.member_num) AS participant_count
-      FROM thread
-      LEFT JOIN book ON thread.book_id = book.book_id
-      LEFT JOIN thread_main ON thread.thread_num = thread_main.thread_num
-      WHERE thread.thread_status = true
-      GROUP BY thread.thread_num, thread.book_id, book.book_title, book.book_author, book.book_publisher
-    `;
-    const threadsResult = await database.query(getThreadsQuery);
+    const { query, page = 1, limit = 6 } = req.query;
+    const offset = (page - 1) * limit;
+
+    // console.log("query:", query);
+    // console.log("page:", page, "limit:", limit, "offset:", offset);
+
+    let getThreadsQuery, threadsParams;
+
+    if (query) {
+      // query가 있는 경우
+      getThreadsQuery = `
+        SELECT 
+          thread.thread_num, 
+          thread.book_id, 
+          book.book_title, 
+          book.book_author, 
+          book.book_publisher, 
+          book.book_cover,
+          COUNT(thread_main.member_num) AS participant_count
+        FROM 
+          thread
+        LEFT JOIN 
+          book ON thread.book_id = book.book_id
+        LEFT JOIN 
+          thread_main ON thread.thread_num = thread_main.thread_num
+        WHERE (book.book_title ILIKE '%' || $1::text || '%' OR book.book_author ILIKE '%' || $1::text || '%') 
+          AND thread.thread_status = 'true'
+        GROUP BY 
+          thread.thread_num, 
+          book.book_id, 
+          book.book_title, 
+          book.book_author, 
+          book.book_publisher, 
+          book.book_cover
+        LIMIT $2 OFFSET $3
+      `;
+      threadsParams = [query, limit, offset];
+    } else {
+      // query가 없는 경우
+      getThreadsQuery = `
+        SELECT 
+          thread.thread_num, 
+          thread.book_id, 
+          book.book_title, 
+          book.book_author, 
+          book.book_publisher, 
+          book.book_cover,
+          COUNT(thread_main.member_num) AS participant_count
+        FROM 
+          thread
+        LEFT JOIN 
+          book ON thread.book_id = book.book_id
+        LEFT JOIN 
+          thread_main ON thread.thread_num = thread_main.thread_num
+        WHERE thread.thread_status = 'true'
+        GROUP BY 
+          thread.thread_num, 
+          book.book_id, 
+          book.book_title, 
+          book.book_author, 
+          book.book_publisher, 
+          book.book_cover
+        LIMIT $1 OFFSET $2
+      `;
+      threadsParams = [limit, offset];
+    }
+
+    // console.log("threadsParams:", threadsParams);
+
+    const threadsResult = await database.query(getThreadsQuery, threadsParams);
     const threadsWithParticipants = threadsResult.rows;
 
-    res.status(200).json({ threads: threadsWithParticipants });
+    // console.log("threadsWithParticipants", threadsWithParticipants);
+
+    // 전체 스레드 수 계산
+    const totalCountQuery = query
+      ? `SELECT COUNT(*) AS total_count FROM thread LEFT JOIN book ON thread.book_id = book.book_id WHERE (book.book_title ILIKE '%' || $1::text || '%' OR book.book_author ILIKE '%' || $1::text || '%') AND thread.thread_status = 'true'`
+      : `SELECT COUNT(*) AS total_count FROM thread WHERE thread.thread_status = 'true'`;
+    const totalCountParams = query ? [query] : [];
+    const totalCountResult = await database.query(
+      totalCountQuery,
+      totalCountParams
+    );
+    const totalCount = totalCountResult.rows[0]?.total_count || 0;
+
+    console.log("totalCount:", totalCount);
+
+    res.status(200).json({
+      threads: threadsWithParticipants,
+      totalCount: parseInt(totalCount, 10),
+    });
   } catch (error) {
     console.error("Error fetching threads:", error);
-    res.status(500).json({ message: "스레드 목록 조회에 실패했습니다." });
+    res.status(500).json({
+      message: "스레드 목록 조회에 실패했습니다.",
+      error: error.message,
+    });
   }
 };
 
-// 스레드 검색 기능
+// 스레드 검색
 exports.searchThreads = async (req, res) => {
   try {
-    const { query } = req.query;
+    const { keyword } = req.query;
 
-    // 검색 쿼리 설정
-    const searchCondition = query
-      ? `WHERE (book.book_title ILIKE '%' || $1 || '%' OR book.book_author ILIKE '%' || $1 || '%') 
-        AND thread.thread_status = true`
-      : `WHERE thread.thread_status = true`;
+    console.log("Received search query:", keyword); // 검색어 확인
+
+    // 검색 조건 설정
+    const searchCondition = keyword
+      ? `WHERE (book.book_title ILIKE '%' || $1::text || '%' OR book.book_author ILIKE '%' || $1::text || '%') 
+        AND thread.thread_status IS TRUE`
+      : `WHERE thread.thread_status IS TRUE`;
 
     const searchQuery = `
       SELECT thread.thread_num, thread.book_id, book.book_title, book.book_author, 
@@ -114,9 +200,12 @@ exports.searchThreads = async (req, res) => {
               book.book_publisher, book.book_cover
     `;
 
-    // 파라미터가 있는 경우와 없는 경우를 구분하여 쿼리 실행
-    const result = query
-      ? await database.query(searchQuery, [query])
+    console.log("Executing search query:", searchQuery); // 쿼리문 확인
+    console.log("Search parameters:", keyword ? [keyword] : []); // 파라미터 확인
+
+    // 파라미터가 있는 경우와 없는 경우 구분하여 쿼리 실행
+    const result = keyword
+      ? await database.query(searchQuery, [keyword])
       : await database.query(searchQuery);
 
     if (result.rows.length === 0) {
