@@ -4,7 +4,7 @@ const communityController = require('../controllers/communityController');
 const {
   deleteBookReview,
   verifyToken,
-} = require('../controllers/postBookReview');
+} = require('../controllers/BookDetailController');
 
 router.delete('/community/:postId', communityController.deleteCommunityPost);
 router.delete(
