@@ -7,10 +7,6 @@ exports.getCommunityPosts = async (req, res) => {
     const member_num = req.query.member_num;
     const source = req.query.source; // 요청의 출처를 구분하기 위한 추가 파라미터
 
-    console.log('Visibility parameter received:', visibility);
-    console.log('Member number received:', member_num);
-    console.log('Source received:', source);
-
     let query = `
       SELECT 
         community.posts_id, 
@@ -37,13 +33,19 @@ exports.getCommunityPosts = async (req, res) => {
 
     // 요청 출처에 따른 필터링 처리
     if (source === 'my_forum' && member_num) {
-      // MyForum 페이지 요청: 로그인한 사용자의 모든 게시물만 가져오기
+      // MyForum 페이지 요청: 로그인한 사용자의 모든 게시물만 가져오기 (Public + Only me)
       query += ` AND community.member_num = $1`;
       queryParams.push(member_num);
-    } else {
-      // Community 페이지 요청
+    } else if (visibility !== undefined) {
+      // Community 페이지 요청: Public 게시물에 대해 visibility 필터링
       query += ` AND community.visibility = $1`;
       queryParams.push(visibility);
+
+      // Only me 요청일 경우, member_num 추가 필터링
+      if (!visibility && member_num) {
+        query += ` AND community.member_num = $2`;
+        queryParams.push(member_num);
+      }
     }
 
     query += `
@@ -62,10 +64,8 @@ exports.getCommunityPosts = async (req, res) => {
 
     const result = await pool.query(query, queryParams);
 
-    console.log('Query result:', result.rows);
     res.status(200).json(result.rows);
   } catch (error) {
-    console.error('Error fetching community posts:', error);
     res.status(500).json({ message: '게시글을 불러오지 못했습니다.' });
   }
 };
