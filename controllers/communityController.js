@@ -422,6 +422,7 @@ exports.getHotTopics = async (req, res) => {
       LEFT JOIN community_comment ON community.posts_id = community_comment.posts_id
       WHERE community_comment.comment_created_at >= CURRENT_DATE
       AND community.post_deleted_at IS NULL
+      AND community.visibility = true
       GROUP BY community.posts_id, community.post_title
       ORDER BY comment_count DESC
       LIMIT 3
