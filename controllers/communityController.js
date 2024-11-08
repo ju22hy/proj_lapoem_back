@@ -1,15 +1,11 @@
-const pool = require("../database/database"); // database 연결 파일
+const pool = require('../database/database'); // database 연결 파일
 
 // 모든 게시글 가져오기
 exports.getCommunityPosts = async (req, res) => {
   try {
-    // 문자열로 받은 visibility를 불리언으로 변환
-    const visibility = req.query.visibility === "true";
+    const visibility = req.query.visibility === 'true';
     const member_num = req.query.member_num;
-
-    // 쿼리 로그
-    console.log("Visibility parameter received:", visibility);
-    console.log("Member number received:", member_num);
+    const source = req.query.source; // 요청의 출처를 구분하기 위한 추가 파라미터
 
     let query = `
       SELECT 
@@ -31,16 +27,25 @@ exports.getCommunityPosts = async (req, res) => {
         community_comment ON community_comment.posts_id = community.posts_id AND community_comment.comment_deleted_at IS NULL
       WHERE 
         community.post_deleted_at IS NULL
-      AND 
-        community.visibility = $1
     `;
 
-    let queryParams = [visibility];
+    let queryParams = [];
 
-    // Only me 요청일 경우, member_num 추가 필터링
-    if (!visibility && member_num) {
-      query += " AND community.member_num = $2";
+    // 요청 출처에 따른 필터링 처리
+    if (source === 'my_forum' && member_num) {
+      // MyForum 페이지 요청: 로그인한 사용자의 모든 게시물만 가져오기 (Public + Only me)
+      query += ` AND community.member_num = $1`;
       queryParams.push(member_num);
+    } else if (visibility !== undefined) {
+      // Community 페이지 요청: Public 게시물에 대해 visibility 필터링
+      query += ` AND community.visibility = $1`;
+      queryParams.push(visibility);
+
+      // Only me 요청일 경우, member_num 추가 필터링
+      if (!visibility && member_num) {
+        query += ` AND community.member_num = $2`;
+        queryParams.push(member_num);
+      }
     }
 
     query += `
@@ -59,11 +64,9 @@ exports.getCommunityPosts = async (req, res) => {
 
     const result = await pool.query(query, queryParams);
 
-    // console.log('Query result:', result.rows);
     res.status(200).json(result.rows);
   } catch (error) {
-    console.error("Error fetching community posts:", error);
-    res.status(500).json({ message: "게시글을 불러오지 못했습니다." });
+    res.status(500).json({ message: '게시글을 불러오지 못했습니다.' });
   }
 };
 
@@ -72,7 +75,7 @@ exports.createCommunityPost = async (req, res) => {
   const { member_num, post_title, post_content, post_status, visibility } =
     req.body;
 
-  console.log("Received post data on server:", {
+  console.log('Received post data on server:', {
     member_num,
     post_title,
     post_content,
@@ -82,22 +85,22 @@ exports.createCommunityPost = async (req, res) => {
 
   // 유효성 검증
   if (!member_num) {
-    console.error("Error: member_num is missing");
+    console.error('Error: member_num is missing');
     return res
       .status(400)
-      .json({ message: "작성자 정보(member_num)가 누락되었습니다." });
+      .json({ message: '작성자 정보(member_num)가 누락되었습니다.' });
   }
   if (!post_title) {
-    console.error("Error: post_title is missing");
-    return res.status(400).json({ message: "제목을 입력해야 합니다." });
+    console.error('Error: post_title is missing');
+    return res.status(400).json({ message: '제목을 입력해야 합니다.' });
   }
   if (!post_content) {
-    console.error("Error: post_content is missing");
-    return res.status(400).json({ message: "내용을 입력해야 합니다." });
+    console.error('Error: post_content is missing');
+    return res.status(400).json({ message: '내용을 입력해야 합니다.' });
   }
 
   // post_status와 visibility 값 검증
-  const validStatuses = ["active", "inactive"];
+  const validStatuses = ['active', 'inactive'];
   if (post_status && !validStatuses.includes(post_status)) {
     console.error(`Error: Invalid post_status value - ${post_status}`);
     return res
@@ -105,30 +108,30 @@ exports.createCommunityPost = async (req, res) => {
       .json({ message: `유효하지 않은 상태 값입니다: ${post_status}` });
   }
 
-  if (typeof visibility !== "boolean") {
+  if (typeof visibility !== 'boolean') {
     console.error(
       `Error: visibility must be true or false, received: ${visibility}`
     );
     return res
       .status(400)
-      .json({ message: "visibility 필드는 true 또는 false여야 합니다." });
+      .json({ message: 'visibility 필드는 true 또는 false여야 합니다.' });
   }
 
   try {
     const result = await pool.query(
-      "INSERT INTO community (member_num, post_title, post_content, post_created_at, post_status, visibility) VALUES ($1, $2, $3, NOW(), $4, $5) RETURNING *",
+      'INSERT INTO community (member_num, post_title, post_content, post_created_at, post_status, visibility) VALUES ($1, $2, $3, NOW(), $4, $5) RETURNING *',
       [member_num, post_title, post_content, post_status, visibility]
     );
 
     if (result.rows.length > 0) {
-      console.log("Post created successfully:", result.rows[0]);
+      console.log('Post created successfully:', result.rows[0]);
       return res.status(201).json(result.rows[0]); // 게시글 생성 성공 시 JSON 응답과 상태 코드 201 반환
     } else {
-      throw new Error("게시글 생성 결과가 없습니다.");
+      throw new Error('게시글 생성 결과가 없습니다.');
     }
   } catch (error) {
-    console.error("Database error:", error);
-    return res.status(500).json({ message: "게시글 생성에 실패했습니다." });
+    console.error('Database error:', error);
+    return res.status(500).json({ message: '게시글 생성에 실패했습니다.' });
   }
 };
 
@@ -167,13 +170,13 @@ exports.getCommunityPostById = async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: "게시글을 찾을 수 없습니다." });
+      return res.status(404).json({ message: '게시글을 찾을 수 없습니다.' });
     }
 
     res.status(200).json(result.rows[0]);
   } catch (error) {
-    console.error("Error fetching community post:", error);
-    res.status(500).json({ message: "게시글을 불러오지 못했습니다." });
+    console.error('Error fetching community post:', error);
+    res.status(500).json({ message: '게시글을 불러오지 못했습니다.' });
   }
 };
 
@@ -181,7 +184,7 @@ exports.getCommunityPostById = async (req, res) => {
 exports.createComment = async (req, res) => {
   const { posts_id, member_num, comment_content } = req.body;
 
-  console.log("Received comment data on server:", {
+  console.log('Received comment data on server:', {
     posts_id,
     member_num,
     comment_content,
@@ -189,35 +192,35 @@ exports.createComment = async (req, res) => {
 
   // 유효성 검증
   if (!posts_id) {
-    console.error("Error: posts_id is missing");
-    return res.status(400).json({ message: "게시글 ID가 누락되었습니다." });
+    console.error('Error: posts_id is missing');
+    return res.status(400).json({ message: '게시글 ID가 누락되었습니다.' });
   }
   if (!member_num) {
-    console.error("Error: member_num is missing");
+    console.error('Error: member_num is missing');
     return res
       .status(400)
-      .json({ message: "작성자 정보(member_num)가 누락되었습니다." });
+      .json({ message: '작성자 정보(member_num)가 누락되었습니다.' });
   }
   if (!comment_content) {
-    console.error("Error: comment_content is missing");
-    return res.status(400).json({ message: "댓글 내용을 입력해야 합니다." });
+    console.error('Error: comment_content is missing');
+    return res.status(400).json({ message: '댓글 내용을 입력해야 합니다.' });
   }
 
   try {
     const result = await pool.query(
-      "INSERT INTO community_comment (posts_id, member_num, comment_content, comment_created_at, comment_status) VALUES ($1, $2, $3, NOW(), $4) RETURNING *",
-      [posts_id, member_num, comment_content, "active"]
+      'INSERT INTO community_comment (posts_id, member_num, comment_content, comment_created_at, comment_status) VALUES ($1, $2, $3, NOW(), $4) RETURNING *',
+      [posts_id, member_num, comment_content, 'active']
     );
 
     if (result.rows.length > 0) {
-      console.log("Comment created successfully:", result.rows[0]);
+      console.log('Comment created successfully:', result.rows[0]);
       return res.status(201).json(result.rows[0]); // 댓글 생성 성공 시 JSON 응답과 상태 코드 201 반환
     } else {
-      throw new Error("댓글 생성 결과가 없습니다.");
+      throw new Error('댓글 생성 결과가 없습니다.');
     }
   } catch (error) {
-    console.error("Database error:", error);
-    return res.status(500).json({ message: "댓글 생성에 실패했습니다." });
+    console.error('Database error:', error);
+    return res.status(500).json({ message: '댓글 생성에 실패했습니다.' });
   }
 };
 
@@ -251,13 +254,13 @@ exports.getCommentsByPostId = async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: "댓글이 없습니다." });
+      return res.status(404).json({ message: '댓글이 없습니다.' });
     }
 
     res.status(200).json(result.rows);
   } catch (error) {
-    console.error("Error fetching comments:", error);
-    res.status(500).json({ message: "댓글을 불러오지 못했습니다." });
+    console.error('Error fetching comments:', error);
+    res.status(500).json({ message: '댓글을 불러오지 못했습니다.' });
   }
 };
 
@@ -276,13 +279,13 @@ exports.deleteComment = async (req, res) => {
     );
 
     if (result.rowCount === 0) {
-      return res.status(404).json({ message: "댓글을 찾을 수 없습니다." });
+      return res.status(404).json({ message: '댓글을 찾을 수 없습니다.' });
     }
 
-    res.status(200).json({ message: "댓글이 삭제되었습니다." });
+    res.status(200).json({ message: '댓글이 삭제되었습니다.' });
   } catch (error) {
-    console.error("Error deleting comment:", error);
-    res.status(500).json({ message: "댓글 삭제에 실패했습니다." });
+    console.error('Error deleting comment:', error);
+    res.status(500).json({ message: '댓글 삭제에 실패했습니다.' });
   }
 };
 
@@ -296,24 +299,24 @@ exports.updateCommunityPost = async (req, res) => {
     const values = [];
 
     if (post_title) {
-      fieldsToUpdate.push("post_title = $" + (fieldsToUpdate.length + 1));
+      fieldsToUpdate.push('post_title = $' + (fieldsToUpdate.length + 1));
       values.push(post_title);
     }
 
     if (post_content) {
-      fieldsToUpdate.push("post_content = $" + (fieldsToUpdate.length + 1));
+      fieldsToUpdate.push('post_content = $' + (fieldsToUpdate.length + 1));
       values.push(post_content);
     }
 
     if (fieldsToUpdate.length === 0) {
       return res
         .status(400)
-        .json({ message: "수정할 필드를 제공해야 합니다." });
+        .json({ message: '수정할 필드를 제공해야 합니다.' });
     }
 
     const query = `
       UPDATE community
-      SET ${fieldsToUpdate.join(", ")}, post_updated_at = NOW()
+      SET ${fieldsToUpdate.join(', ')}, post_updated_at = NOW()
       WHERE posts_id = $${fieldsToUpdate.length + 1} AND post_deleted_at IS NULL
       RETURNING *
     `;
@@ -322,13 +325,13 @@ exports.updateCommunityPost = async (req, res) => {
     const result = await pool.query(query, values);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: "게시글을 찾을 수 없습니다." });
+      return res.status(404).json({ message: '게시글을 찾을 수 없습니다.' });
     }
 
     res.status(200).json(result.rows[0]);
   } catch (error) {
-    console.error("Error updating community post:", error);
-    res.status(500).json({ message: "게시글 수정에 실패했습니다." });
+    console.error('Error updating community post:', error);
+    res.status(500).json({ message: '게시글 수정에 실패했습니다.' });
   }
 };
 
@@ -355,13 +358,13 @@ exports.deleteCommunityPost = async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: "게시글을 찾을 수 없습니다." });
+      return res.status(404).json({ message: '게시글을 찾을 수 없습니다.' });
     }
 
-    res.status(200).json({ message: "게시글과 관련된 댓글이 삭제되었습니다." });
+    res.status(200).json({ message: '게시글과 관련된 댓글이 삭제되었습니다.' });
   } catch (error) {
-    console.error("Error deleting community post:", error);
-    res.status(500).json({ message: "게시글 삭제에 실패했습니다." });
+    console.error('Error deleting community post:', error);
+    res.status(500).json({ message: '게시글 삭제에 실패했습니다.' });
   }
 };
 
@@ -369,13 +372,13 @@ exports.deleteCommunityPost = async (req, res) => {
 exports.getUserStats = async (req, res) => {
   const { member_num } = req.query;
 
-  console.log("Received member_num:", member_num); // 추가 로그
+  console.log('Received member_num:', member_num); // 추가 로그
 
   if (!member_num) {
     return res
       .status(400)
-      .set("Content-Type", "application/json")
-      .json({ message: "member_num이 누락되었습니다." });
+      .set('Content-Type', 'application/json')
+      .json({ message: 'member_num이 누락되었습니다.' });
   }
 
   try {
@@ -392,21 +395,21 @@ exports.getUserStats = async (req, res) => {
     const totalPosts = postsResult.rows[0]?.total_posts ?? 0;
     const totalComments = commentsResult.rows[0]?.total_comments ?? 0;
 
-    res.status(200).set("Content-Type", "application/json").json({
+    res.status(200).set('Content-Type', 'application/json').json({
       total_posts: totalPosts,
       total_comments: totalComments,
     });
 
-    console.log("User stats sent:", {
+    console.log('User stats sent:', {
       total_posts: totalPosts,
       total_comments: totalComments,
     });
   } catch (error) {
-    console.error("Error fetching user stats:", error);
+    console.error('Error fetching user stats:', error);
     res
       .status(500)
-      .set("Content-Type", "application/json")
-      .json({ message: "사용자 통계를 불러오지 못했습니다." });
+      .set('Content-Type', 'application/json')
+      .json({ message: '사용자 통계를 불러오지 못했습니다.' });
   }
 };
 
@@ -419,6 +422,7 @@ exports.getHotTopics = async (req, res) => {
       LEFT JOIN community_comment ON community.posts_id = community_comment.posts_id
       WHERE community_comment.comment_created_at >= CURRENT_DATE
       AND community.post_deleted_at IS NULL
+      AND community.visibility = true
       GROUP BY community.posts_id, community.post_title
       ORDER BY comment_count DESC
       LIMIT 3
@@ -426,8 +430,8 @@ exports.getHotTopics = async (req, res) => {
 
     res.status(200).json(result.rows);
   } catch (error) {
-    console.error("Error fetching hot topics:", error);
-    res.status(500).json({ message: "핫토픽을 불러오지 못했습니다." });
+    console.error('Error fetching hot topics:', error);
+    res.status(500).json({ message: '핫토픽을 불러오지 못했습니다.' });
   }
 };
 
@@ -446,7 +450,7 @@ exports.getTopUsers = async (req, res) => {
 
     res.status(200).json(result.rows);
   } catch (error) {
-    console.error("Error fetching top users:", error);
-    res.status(500).json({ message: "사용자 정보를 불러오지 못했습니다." });
+    console.error('Error fetching top users:', error);
+    res.status(500).json({ message: '사용자 정보를 불러오지 못했습니다.' });
   }
 };
