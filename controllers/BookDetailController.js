@@ -119,8 +119,9 @@ const postBookReview = async (req, res) => {
         .json({ error: 'Book ID and review content are required.' });
     }
 
-    // 평점 유효성 검사 (0.5 ~ 10 범위, 0.5 단위)
-    const validRatings = Array.from({ length: 20 }, (_, i) => (i + 1) * 0.5); // [0.5, 1.0, ..., 10.0]
+    // 평점 유효성 검사 (1 ~ 10 범위, [2, 4, 6, 8, 10])
+    const validRatings = Array.from({ length: 5 }, (_, i) => (i + 1) * 2);
+
     if (!validRatings.includes(parseFloat(rating))) {
       return res.status(400).json({
         error: 'Rating must be between 0.5 and 10, in 0.5 increments.',
