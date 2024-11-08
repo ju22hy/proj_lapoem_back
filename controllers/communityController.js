@@ -3,13 +3,13 @@ const pool = require('../database/database'); // database 연결 파일
 // 모든 게시글 가져오기
 exports.getCommunityPosts = async (req, res) => {
   try {
-    // 문자열로 받은 visibility를 불리언으로 변환
     const visibility = req.query.visibility === 'true';
     const member_num = req.query.member_num;
+    const source = req.query.source; // 요청의 출처를 구분하기 위한 추가 파라미터
 
-    // 쿼리 로그
     console.log('Visibility parameter received:', visibility);
     console.log('Member number received:', member_num);
+    console.log('Source received:', source);
 
     let query = `
       SELECT 
@@ -31,16 +31,19 @@ exports.getCommunityPosts = async (req, res) => {
         community_comment ON community_comment.posts_id = community.posts_id AND community_comment.comment_deleted_at IS NULL
       WHERE 
         community.post_deleted_at IS NULL
-      AND 
-        community.visibility = $1
     `;
 
-    let queryParams = [visibility];
+    let queryParams = [];
 
-    // Only me 요청일 경우, member_num 추가 필터링
-    if (!visibility && member_num) {
-      query += ' AND community.member_num = $2';
+    // 요청 출처에 따른 필터링 처리
+    if (source === 'my_forum' && member_num) {
+      // MyForum 페이지 요청: 로그인한 사용자의 모든 게시물만 가져오기
+      query += ` AND community.member_num = $1`;
       queryParams.push(member_num);
+    } else {
+      // Community 페이지 요청
+      query += ` AND community.visibility = $1`;
+      queryParams.push(visibility);
     }
 
     query += `
