@@ -65,11 +65,11 @@ const getBookReviews = async (req, res) => {
         r.review_num,
         r.review_content,
         r.rating,
-        to_char(r.review_created_at, 'DD.MM.YY (HH24:MI)') AS review_created_at,
+        to_char(r.review_created_at, 'YY.MM.DD (HH24:MI)') AS review_created_at,
         m.member_num,
         m.member_nickname,
         m.member_gender,
-        to_char(m.member_birth_date, 'DD.MM.YY') AS member_birth_date
+        to_char(m.member_birth_date, 'YY.MM.DD') AS member_birth_date
       FROM 
         book_review r
       JOIN 
