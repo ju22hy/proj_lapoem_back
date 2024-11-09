@@ -12,7 +12,7 @@ const getBookDetail = async (req, res) => {
             b.book_id,
             b.book_cover,
             b.book_publisher,
-            b.publish_date,
+            TO_CHAR(b.publish_date, 'YYYY.MM.DD') AS publish_date, -- 형식을 2018.11.08로 변경
             b.isbn,
             b.book_description,
             b.book_price,
