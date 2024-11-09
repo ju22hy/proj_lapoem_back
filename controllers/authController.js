@@ -42,6 +42,39 @@ exports.joinUser = async (req, res) => {
   }
 };
 
+// 약관 조회
+exports.getTerms = async (req, res) => {
+  try {
+    const result = await database.query('SELECT * FROM term WHERE terms_deleted_at IS NULL ORDER BY terms_id');
+    res.json(result.rows);
+  } catch (error) {
+    console.error('약관 조회 오류:', error.message);
+    res.status(500).json({ message: '서버 오류가 발생했습니다.' });
+  }
+};
+
+// 약관 동의 내역 저장
+exports.saveAgreement = async (req, res) => {
+  const { agreements } = req.body;
+
+  try {
+    const queryText = `
+      INSERT INTO term_link (member_num, terms_id, agreement_status, agreed_at)
+      VALUES ($1, $2, $3, NOW())
+      ON CONFLICT (member_num, terms_id) 
+      DO UPDATE SET agreement_status = $3, agreed_at = NOW();
+    `;
+
+    for (const agreement of agreements) {
+      await database.query(queryText, [agreement.member_num, agreement.terms_id, agreement.agreement_status]);
+    }
+    res.status(200).json({ message: '약관 동의 내역이 저장되었습니다.' });
+  } catch (error) {
+    console.error('약관 동의 저장 오류:', error.message);
+    res.status(500).json({ message: '서버 오류가 발생했습니다.' });
+  }
+};
+
 // 로그인
 exports.loginUser = async (req, res) => {
   try {
