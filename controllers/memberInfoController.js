@@ -150,9 +150,75 @@ const updateMemberInfo = async (req, res) => {
   }
 };
 
+//====================회원 탈퇴======================
+const deleteMembership = async (req, res) => {
+  try {
+    const member_num = req.user.memberNum; // 인증된 사용자 ID 가져오기
+
+    // 회원 상태가 이미 inactive인지 확인
+    const checkQuery = `
+      SELECT member_status 
+      FROM member
+      WHERE member_num = $1;
+    `;
+    const checkResult = await database.query(checkQuery, [member_num]);
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Member not found' });
+    }
+
+    if (checkResult.rows[0].member_status === 'inactive') {
+      return res.status(400).json({ message: 'Member is already deactivated' });
+    }
+
+    // 연결된 테이블들 상태를 각각 업데이트 (book_review, community, community_comment, thread_main)
+    const updateBookReviewQuery = `
+      UPDATE book_review SET review_status = 'inactive' WHERE member_num = $1;
+    `;
+    const updateCommunityQuery = `
+      UPDATE community SET post_status = 'deleted' WHERE member_num = $1;
+    `;
+    const updateCommunityCommentQuery = `
+      UPDATE community_comment SET comment_status = 'deleted' WHERE member_num = $1;
+    `;
+    const updateThreadMainQuery = `
+      UPDATE thread_main SET thread_status = 'false' WHERE member_num = $1;
+    `;
+
+    await database.query(updateBookReviewQuery, [member_num]);
+    await database.query(updateCommunityQuery, [member_num]);
+    await database.query(updateCommunityCommentQuery, [member_num]);
+    await database.query(updateThreadMainQuery, [member_num]);
+
+    // 회원 상태를 inactive로 업데이트 (탈퇴 처리)
+    const updateQuery = `
+      UPDATE member
+      SET member_status = 'inactive',
+          member_leave_date = NOW()
+      WHERE member_num = $1
+      RETURNING member_num, member_status;
+    `;
+    const updateResult = await database.query(updateQuery, [member_num]);
+
+    if (updateResult.rows.length === 0) {
+      return res.status(500).json({ message: 'Failed to deactivate member' });
+    }
+
+    // 탈퇴 후 토큰 삭제 또는 만료 처리 (로그인 상태 끊기)
+    // 예시: (JWT 토큰 삭제는 클라이언트에서 처리해야 함)
+
+    // 탈퇴 성공
+    res.status(200).json({ message: 'Membership successfully deactivated' });
+  } catch (error) {
+    console.error('Error deactivating membership:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 module.exports = {
   verifyInfoToken,
   getMemberInfo,
   getMemberNicknames,
   updateMemberInfo,
+  deleteMembership,
 };

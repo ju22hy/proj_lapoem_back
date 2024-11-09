@@ -5,6 +5,10 @@ const {
   deleteBookReview,
   verifyToken,
 } = require('../controllers/BookDetailController');
+const {
+  verifyInfoToken,
+  deleteMembership,
+} = require('../controllers/memberInfoController');
 
 router.delete('/community/:postId', communityController.deleteCommunityPost);
 router.delete(
@@ -17,5 +21,7 @@ router.delete(
   verifyToken,
   deleteBookReview
 );
+
+router.delete('/members/:member_num', verifyInfoToken, deleteMembership);
 
 module.exports = router;
