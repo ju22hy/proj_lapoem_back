@@ -64,7 +64,80 @@ const getMemberNicknames = async (req, res) => {
   }
 };
 
+//====================회원 정보 수정======================
+const updateMemberInfo = async (req, res) => {
+  try {
+    const { member_num } = req.params;
+    const { member_email, member_phone, member_nickname, marketing_consent } =
+      req.body;
+
+    // 먼저, 기존 회원 정보에서 현재 닉네임을 가져옵니다.
+    const getCurrentNicknameQuery = `
+      SELECT member_nickname
+      FROM member
+      WHERE member_num = $1;
+    `;
+    const currentNicknameResult = await database.query(
+      getCurrentNicknameQuery,
+      [member_num]
+    );
+
+    if (currentNicknameResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Member not found' });
+    }
+
+    const currentNickname = currentNicknameResult.rows[0].member_nickname;
+
+    // 회원 정보 업데이트 쿼리
+    const updateQuery = `
+      UPDATE member
+      SET 
+        member_email = COALESCE($1, member_email),
+        member_phone = COALESCE($2, member_phone),
+        member_nickname = COALESCE($3, member_nickname),
+        marketing_consent = COALESCE($4, marketing_consent)
+      WHERE member_num = $5
+      RETURNING member_num, member_id, member_email, member_phone, member_nickname, marketing_consent;
+    `;
+
+    const updateValues = [
+      member_email,
+      member_phone,
+      member_nickname,
+      marketing_consent,
+      member_num,
+    ];
+
+    const updateResult = await database.query(updateQuery, updateValues);
+
+    if (updateResult.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ message: 'Member not found or no changes made' });
+    }
+
+    // 닉네임이 변경된 경우 member_nickname 테이블에 이력을 추가합니다.
+    if (member_nickname && member_nickname !== currentNickname) {
+      const nicknameChangeQuery = `
+        INSERT INTO member_nickname (member_num, new_nickname, change_date)
+        VALUES ($1, $2, NOW());
+      `;
+      await database.query(nicknameChangeQuery, [member_num, member_nickname]);
+    }
+
+    // 수정된 회원 정보 반환
+    res.status(200).json({
+      message: 'Member information updated successfully',
+      data: updateResult.rows[0],
+    });
+  } catch (error) {
+    console.error('Error updating member info:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 module.exports = {
   getMemberInfo,
   getMemberNicknames,
+  updateMemberInfo,
 };
