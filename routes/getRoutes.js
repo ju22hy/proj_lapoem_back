@@ -16,7 +16,10 @@ const { getNewBook } = require('../controllers/getNewBook');
 const { getBestBook } = require('../controllers/getBestBook');
 
 const { verifyToken } = require('../controllers/authController');
-const { getMemberInfo } = require('../controllers/memberInfoController');
+const {
+  getMemberInfo,
+  getMemberNicknames,
+} = require('../controllers/memberInfoController'); //회원정보 get
 
 const {
   getCommunityPosts,
@@ -54,6 +57,7 @@ router.get('/threads/exists/:book_id', checkThreadExistence);
 router.get('/search-threads', searchThreads);
 router.get('/terms', getTerms); // 약관 조회 라우트
 router.get('/members/:member_num', getMemberInfo); // id로 회원 정보 조회
+router.get('/members/:member_num/nicknames', getMemberNicknames); // id로 회원 정보 조회
 
 // 토큰 검증 라우트
 router.get('/verify', verifyToken);
