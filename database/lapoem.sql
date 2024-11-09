@@ -25,11 +25,13 @@ CREATE TABLE member (
 CREATE TABLE member_nickname (
     nickname_change_id SERIAL PRIMARY KEY,
     member_num INT NOT NULL,
-    previous_nickname VARCHAR(50) NOT NULL,
+    -- previous_nickname VARCHAR(50) NOT NULL, -- 테이터베이스에서 시간 순으로 닉네임 관리함, 그래서 하나면 있어도 됨
     new_nickname VARCHAR(50) NULL,
     change_date TIMESTAMP NULL,
     CONSTRAINT fk_nickname_member FOREIGN KEY (member_num) REFERENCES member (member_num)
 );
+
+
 
 -- term 테이블 생성
 CREATE TABLE term (
