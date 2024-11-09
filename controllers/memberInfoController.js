@@ -1,9 +1,23 @@
 const database = require('../database/database');
+const jwt = require('jsonwebtoken');
+
+// JWT를 사용해 로그인 상태를 확인하는 미들웨어
+const verifyInfoToken = (req, res, next) => {
+  const token = req.cookies.token;
+  if (!token) return res.status(401).json({ message: 'Unauthorized' });
+
+  jwt.verify(token, process.env.SECRET_KEY, (err, decoded) => {
+    if (err)
+      return res.status(401).json({ message: 'Token is invalid or expired' });
+    req.user = decoded; // 인증된 사용자 정보 저장
+    next();
+  });
+};
 
 //====================특정 회원 정보를 조회======================
 const getMemberInfo = async (req, res) => {
   try {
-    const { member_num } = req.params;
+    const member_num = req.user.memberNum; // 인증된 사용자 ID 가져오기
 
     const query = `
       SELECT 
@@ -137,6 +151,7 @@ const updateMemberInfo = async (req, res) => {
 };
 
 module.exports = {
+  verifyInfoToken,
   getMemberInfo,
   getMemberNicknames,
   updateMemberInfo,
