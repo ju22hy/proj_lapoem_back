@@ -2,14 +2,22 @@ const express = require('express');
 const router = express.Router();
 
 // 컨트롤러 선언
-const { getBookList, getBookByCategory, getAllCategories } = require('../controllers/getBookList');
-const { getBookDetail, getBookReviews } = require('../controllers/BookDetailController');
-// const { getBookReviews } = require('../controllers/getBookReviews');
-
+const {
+  getBookList,
+  getBookByCategory,
+  getAllCategories,
+} = require('../controllers/getBookList');
+const {
+  getBookDetail,
+  getBookReviews,
+} = require('../controllers/BookDetailController');
 const { getSearchBooks } = require('../controllers/getSearchBooks');
-const { verifyToken } = require('../controllers/authController');
 const { getNewBook } = require('../controllers/getNewBook');
 const { getBestBook } = require('../controllers/getBestBook');
+
+const { verifyToken } = require('../controllers/authController');
+const { getMemberInfo } = require('../controllers/memberInfoController');
+
 const {
   getCommunityPosts,
   getCommunityPostById,
@@ -18,7 +26,11 @@ const {
   getTopUsers,
 } = require('../controllers/communityController');
 const { getUserStats } = require('../controllers/communityController');
-const { getThreads, checkThreadExistence, searchThreads } = require('../controllers/threadController');
+const {
+  getThreads,
+  checkThreadExistence,
+  searchThreads,
+} = require('../controllers/threadController');
 
 const getTerms = require('../controllers/authController').getTerms;
 
@@ -41,6 +53,7 @@ router.get('/threads', getThreads);
 router.get('/threads/exists/:book_id', checkThreadExistence);
 router.get('/search-threads', searchThreads);
 router.get('/terms', getTerms); // 약관 조회 라우트
+router.get('/members/:member_num', getMemberInfo); // id로 회원 정보 조회
 
 // 토큰 검증 라우트
 router.get('/verify', verifyToken);
