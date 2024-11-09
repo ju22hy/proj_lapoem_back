@@ -1,7 +1,9 @@
 ﻿-- 자주 사용하는 qury문
+--조회
 SELECT * FROM 테이블
 SELECT 컬럼 FROM 테이블
 SELECT * FROM 테이블 WHERE 컬럼 = '값'
+DROP TABLE 테이블 --삭제
 
 -- member 테이블 생성
 CREATE TABLE member (
@@ -15,7 +17,8 @@ CREATE TABLE member (
     member_leave_date DATE NULL,
     member_gender CHAR(1) NOT NULL,
     member_birth_date DATE NOT NULL,
-    member_status VARCHAR(20) NOT NULL
+    member_status VARCHAR(20) NOT NULL,
+    marketing_consent BOOLEAN DEFAULT FALSE
 );
 
 -- member_nickname 테이블 생성
@@ -23,8 +26,8 @@ CREATE TABLE member_nickname (
     nickname_change_id SERIAL PRIMARY KEY,
     member_num INT NOT NULL,
     previous_nickname VARCHAR(50) NOT NULL,
-    new_nickname VARCHAR(50) NOT NULL,
-    change_date TIMESTAMP NOT NULL,
+    new_nickname VARCHAR(50) NULL,
+    change_date TIMESTAMP NULL,
     CONSTRAINT fk_nickname_member FOREIGN KEY (member_num) REFERENCES member (member_num)
 );
 
@@ -36,6 +39,15 @@ CREATE TABLE term (
     terms_created_at TIMESTAMP NOT NULL,
     terms_updated_at TIMESTAMP NULL,
     terms_deleted_at TIMESTAMP NULL
+);
+
+-- term_link 테이블 생성
+CREATE TABLE term_link (
+    member_num INT NOT NULL,
+    terms_id INT NOT NULL,
+    PRIMARY KEY (member_num, terms_id),
+    CONSTRAINT fk_term_link_member FOREIGN KEY (member_num) REFERENCES member (member_num),
+    CONSTRAINT fk_term_link_terms FOREIGN KEY (terms_id) REFERENCES term (terms_id)
 );
 
 -- book_category 테이블 생성
@@ -155,14 +167,6 @@ CREATE TABLE community_comment (
 
 
 
--- term_link 테이블 생성
-CREATE TABLE term_link (
-    member_num INT NOT NULL,
-    terms_id INT NOT NULL,
-    PRIMARY KEY (member_num, terms_id),
-    CONSTRAINT fk_term_link_member FOREIGN KEY (member_num) REFERENCES member (member_num),
-    CONSTRAINT fk_term_link_terms FOREIGN KEY (terms_id) REFERENCES term (terms_id)
-);
 
 -- thread 테이블 생성
 CREATE TABLE thread (
