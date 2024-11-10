@@ -57,7 +57,7 @@ const getMemberNicknames = async (req, res) => {
     const query = `
       SELECT 
           new_nickname,
-          TO_CHAR(change_date, 'YY.MM.DD HH24:MI') AS change_date
+          TO_CHAR(change_date, 'YYYY.MM.DD HH24:MI') AS change_date
       FROM member_nickname
       WHERE member_num = $1
       ORDER BY change_date DESC;
@@ -85,7 +85,32 @@ const updateMemberInfo = async (req, res) => {
     const { member_email, member_phone, member_nickname, marketing_consent } =
       req.body;
 
-    // 먼저, 기존 회원 정보에서 현재 닉네임을 가져옵니다.
+      // 1. 이메일 유효성 검사
+    if (!member_email || !member_email.includes('@')) {
+      return res.status(400).json({ message: 'Invalid email format' });
+    }
+
+    // 2. 이메일 중복 검사
+    const checkEmailQuery = `
+      SELECT member_email 
+      FROM member 
+      WHERE member_email = $1 AND member_num != $2;
+    `;
+    const checkEmailResult = await database.query(checkEmailQuery, [member_email, member_num]);
+    if (checkEmailResult.rows.length > 0) {
+      return res.status(400).json({ message: 'Email is already in use' });
+    }
+
+    // 3. 닉네임 유효성 검사
+    if (!member_nickname || member_nickname.length < 1 || member_nickname.length > 20) {
+      return res.status(400).json({ message: 'Nickname must be between 1 and 20 characters' });
+    }
+
+    // 4. 연락처 유효성 검사
+    if (!member_phone || member_phone.length !== 11 || !member_phone.startsWith('010')) {
+      return res.status(400).json({ message: 'Phone number must be 11 digits and start with 010' });
+    }
+
     const getCurrentNicknameQuery = `
       SELECT member_nickname
       FROM member
