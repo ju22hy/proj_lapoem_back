@@ -171,10 +171,13 @@ exports.getThreadComment = async (req, res) => {
         thread_main.thread_content,
         thread_main.thread_content_created_at,
         thread_main.thread_status,
-        (SELECT COUNT(*) FROM thread_main AS reply WHERE reply.thread_content_num2 = thread_main.thread_content_num AND reply.thread_status = true) AS reply_count
+        (SELECT COUNT(*) FROM thread_main AS reply 
+         WHERE reply.thread_content_num2 = thread_main.thread_content_num 
+           AND reply.thread_status = true) AS reply_count
       FROM thread_main
       JOIN member ON thread_main.member_num = member.member_num
-      WHERE thread_main.thread_num = $1 AND thread_main.thread_content_num2 IS NULL
+      WHERE thread_main.thread_num = $1 
+        AND thread_main.thread_content_num2 IS NULL
       ORDER BY thread_main.thread_content_created_at DESC
       OFFSET $2 LIMIT $3
     `;
@@ -191,16 +194,18 @@ exports.getThreadComment = async (req, res) => {
         // 대댓글 쿼리 (True 상태인 것만 최신순으로 가져오기)
         const repliesQuery = `
           SELECT 
-            thread_content_num,
-            member_num,
-            member_nickname,
-            thread_content,
-            thread_content_created_at,
-            thread_status
+            thread_main.thread_content_num,
+            thread_main.member_num,
+            member.member_nickname,
+            thread_main.thread_content,
+            thread_main.thread_content_created_at,
+            thread_main.thread_status
           FROM thread_main
           JOIN member ON thread_main.member_num = member.member_num
-          WHERE thread_content_num2 = $1 AND thread_status = true
-          ORDER BY thread_content_created_at DESC
+          WHERE thread_main.thread_content_num2 = $1 
+            AND thread_main.thread_status = true
+          ORDER BY thread_main.thread_content_created_at DESC
+          LIMIT 2 -- 최신 2개의 대댓글만 가져오기
         `;
         const repliesValues = [comment.thread_content_num];
         const repliesResult = await database.query(repliesQuery, repliesValues);
