@@ -28,6 +28,15 @@ exports.createThread = async (req, res) => {
     const { book_id, member_num, thread_content } = req.body;
     console.log("Received data:", { book_id, member_num, thread_content });
 
+    // 로그인 여부 확인
+    const userCheckQuery =
+      "SELECT * FROM member WHERE member_num = $1 AND member_status = 'active'";
+    const userCheckResult = await database.query(userCheckQuery, [member_num]);
+
+    if (userCheckResult.rows.length === 0) {
+      return res.status(403).json({ message: "회원 로그인이 필요합니다." });
+    }
+
     // 데이터 확인 단계
     if (!book_id || !member_num || !thread_content) {
       return res.status(400).json({ message: "모든 필드를 입력해야 합니다." });
