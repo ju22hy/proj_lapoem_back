@@ -27,7 +27,7 @@ const getMemberInfo = async (req, res) => {
           member_phone,
           member_gender,
           member_nickname,
-          TO_CHAR(member_birth_date, 'YY.MM.DD') AS member_birth_date,
+          TO_CHAR(member_birth_date, 'YYYY.MM.DD') AS member_birth_date,
           member_status,
           member_join_date,
           member_leave_date,
