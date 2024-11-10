@@ -86,9 +86,9 @@ const updateMemberInfo = async (req, res) => {
       req.body;
 
       // 1. 이메일 유효성 검사
-    if (!member_email || !member_email.includes('@')) {
-      return res.status(400).json({ message: 'Invalid email format' });
-    }
+    if (!member_email || !member_email.includes('@') || /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(member_email)) {
+      return res.status(400).json({ message: 'Invalid email format or Korean characters detected' });
+      }
 
     // 2. 이메일 중복 검사
     const checkEmailQuery = `
