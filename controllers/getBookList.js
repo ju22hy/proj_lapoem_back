@@ -166,3 +166,55 @@ exports.getBookByCategory = async (req, res) => {
     res.status(500).json({ error: 'Error fetching books by category' });
   }
 };
+
+
+// ======================가장 점수가 높고 리뷰가 많은 책============================
+exports.getTopBooks = async (req, res) => {
+  try {
+    const limit = 10; // Set a fixed limit for top books (adjust as needed)
+    
+    // Modify query to sort by highest rating and review count
+    let query = `
+      SELECT 
+        b.book_id,
+        b.book_title,
+        b.book_cover,
+        b.book_author,
+        b.book_publisher,
+        b.genre_tag_name,
+        b.isbn,
+        b.book_description,
+        b.book_price,
+        b.publish_date,
+        b.genre_tag_id,
+        b.is_book_best,
+        b.book_status,
+        CASE 
+          WHEN AVG(CASE WHEN br.review_status = 'active' THEN br.rating END) IS NULL THEN 0 
+          ELSE ROUND(AVG(CASE WHEN br.review_status = 'active' THEN br.rating END), 1) 
+        END AS average_rating,
+        COUNT(CASE WHEN br.review_status = 'active' THEN br.rating END) AS review_count
+      FROM book AS b
+      LEFT JOIN book_review AS br ON b.book_id = br.book_id
+      WHERE b.book_status IS NOT false -- Exclude books with status 'false'
+      GROUP BY b.book_id
+      ORDER BY average_rating DESC, review_count DESC -- Sort by highest rating and review count
+      LIMIT $1; -- Limit to top N books (e.g., 10)
+    `;
+
+    // Parameters for the query
+    const queryParams = [limit];
+
+    // Execute query to get the top books
+    const topBooksResult = await database.query(query, queryParams);
+
+    if (!topBooksResult.rows.length) {
+      return res.status(404).json({ message: 'No top books found' });
+    }
+
+    return res.status(200).json(topBooksResult.rows); // Return top-rated and most-reviewed books
+  } catch (error) {
+    console.error('Error fetching top books:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};

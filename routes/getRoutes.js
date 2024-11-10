@@ -6,6 +6,7 @@ const {
   getBookList,
   getBookByCategory,
   getAllCategories,
+  getTopBooks,
 } = require("../controllers/getBookList");
 const {
   getBookDetail,
@@ -46,6 +47,8 @@ const getTerms = require("../controllers/authController").getTerms;
 router.get("/book-list", getBookList);
 router.get("/book-list/:bookId", getBookDetail);
 router.get("/book-list/:bookId/reviews", getBookReviews);
+router.get("/top-books", getTopBooks);
+
 router.get("/community", getCommunityPosts);
 router.get("/community/:postId", getCommunityPostById);
 router.get("/community/:postId/comments", getCommentsByPostId);
