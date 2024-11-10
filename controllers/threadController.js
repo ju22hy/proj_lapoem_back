@@ -1,5 +1,4 @@
-// controllers/threadController.js
-const database = require("../database/database"); // database 객체가 제대로 연결되어 있어야 합니다
+const database = require("../database/database");
 
 // 스레드가 이미 존재하는지 확인
 exports.checkThreadExistence = async (req, res) => {
@@ -170,7 +169,7 @@ exports.getThreads = async (req, res) => {
     );
     const totalCount = totalCountResult.rows[0]?.total_count || 0;
 
-    console.log("totalCount:", totalCount);
+    // console.log("totalCount:", totalCount);
 
     res.status(200).json({
       threads: threadsWithParticipants,
@@ -225,5 +224,45 @@ exports.searchThreads = async (req, res) => {
   } catch (error) {
     console.error("Error searching threads:", error);
     res.status(500).json({ message: "스레드 검색 중 오류가 발생했습니다." });
+  }
+};
+
+// 스레드 상세 조회
+exports.getThreadDetail = async (req, res) => {
+  try {
+    const { thread_num } = req.params;
+    if (!thread_num) {
+      return res.status(400).json({ message: "스레드 번호가 필요합니다." });
+    }
+
+    // 스레드 정보와 관련 사용자 및 책 정보 조회
+    const query = `
+      SELECT 
+        tm.thread_content, 
+        tm.thread_content_created_at,
+        m.member_nickname, 
+        b.book_title, 
+        b.book_author, 
+        b.book_cover
+      FROM thread_main tm
+      LEFT JOIN member m ON tm.member_num = m.member_num
+      LEFT JOIN thread t ON tm.thread_num = t.thread_num
+      LEFT JOIN book b ON t.book_id = b.book_id
+      WHERE tm.thread_num = $1
+      ORDER BY tm.thread_content_created_at
+    `;
+    const values = [thread_num];
+    const result = await database.query(query, values);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "스레드를 찾을 수 없습니다." });
+    }
+
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error("Error fetching thread details:", error);
+    res
+      .status(500)
+      .json({ message: "스레드 상세정보를 가져오는데 실패했습니다." });
   }
 };
