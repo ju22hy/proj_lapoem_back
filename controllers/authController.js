@@ -13,6 +13,7 @@ exports.joinUser = async (req, res) => {
       member_phone,
       member_gender,
       member_birth_date,
+      marketing_consent,
     } = req.body;
 
     // 아이디, 닉네임, 이메일 중복 체크
@@ -30,9 +31,18 @@ exports.joinUser = async (req, res) => {
     // 비밀번호 암호화 및 회원 정보 저장
     const hashedPassword = await bcrypt.hash(member_password, 10);
     const result = await database.query(
-      `INSERT INTO member (member_id, member_password, member_nickname, member_email, member_phone, member_join_date, member_gender, member_birth_date, member_status) 
-       VALUES ($1, $2, $3, $4, $5, CURRENT_DATE, $6, $7, 'active') RETURNING member_num`,
-      [member_id, hashedPassword, member_nickname, member_email, member_phone, member_gender, member_birth_date]
+      `INSERT INTO member (member_id, member_password, member_nickname, member_email, member_phone, member_join_date, member_gender, member_birth_date, member_status, marketing_consent) 
+   VALUES ($1, $2, $3, $4, $5, CURRENT_DATE, $6, $7, 'active', $8) RETURNING member_num`,
+      [
+        member_id,
+        hashedPassword,
+        member_nickname,
+        member_email,
+        member_phone,
+        member_gender,
+        member_birth_date,
+        marketing_consent,
+      ]
     );
 
     res.status(201).json({ message: '회원가입이 완료되었습니다.', userId: result.rows[0].member_num });
