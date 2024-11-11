@@ -424,6 +424,7 @@ exports.getHotTopics = async (req, res) => {
       JOIN member ON community.member_num = member.member_num
       WHERE community.post_deleted_at IS NULL
       AND community.visibility = true
+      AND community.post_created_at >= NOW() - INTERVAL '7 days'
       GROUP BY community.posts_id, community.post_title, member.member_nickname, community.post_created_at
       ORDER BY comment_count DESC
       LIMIT $1
