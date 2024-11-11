@@ -28,6 +28,6 @@ router.delete(
 router.delete("/members/:member_num", verifyInfoToken, deleteMembership);
 
 // 스레드 댓글 및 대댓글 삭제
-router.delete("/threads/comment/:commentId", deleteThreadComment);
+router.delete("/threads/comment/:thread_content_num", deleteThreadComment);
 
 module.exports = router;

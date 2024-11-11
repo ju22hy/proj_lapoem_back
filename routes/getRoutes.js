@@ -39,6 +39,7 @@ const {
 const {
   getThreadDetail,
   getThreadComment,
+  getCommentReply,
 } = require("../controllers/threadDetailController");
 
 const getTerms = require("../controllers/authController").getTerms;
@@ -64,7 +65,8 @@ router.get("/threads", getThreads);
 router.get("/threads/exists/:book_id", checkThreadExistence);
 router.get("/search-threads", searchThreads);
 router.get("/threads/:thread_num", getThreadDetail);
-router.get("/threads/:thread_num/comments", getThreadComment);
+router.get("/threads/:thread_num/comments", getThreadComment); // 스레드 부모 댓글 조회
+router.get("/comments/:thread_content_num2/replies", getCommentReply); // 스레드 대댓글 조회
 router.get("/terms", getTerms); // 약관 조회 라우트
 router.get("/members/:member_num", verifyInfoToken, getMemberInfo); // id로 회원 정보 조회
 router.get(

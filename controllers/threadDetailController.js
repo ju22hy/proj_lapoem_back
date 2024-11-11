@@ -12,8 +12,8 @@ exports.getThreadDetail = async (req, res) => {
         book.book_title,
         thread.thread_created_at,
         thread.thread_status,
-        COUNT(DISTINCT thread_main.member_num) AS participant_count,
-        COUNT(thread_main.thread_content) AS total_comments
+        COUNT(DISTINCT CASE WHEN thread_main.thread_status = true THEN thread_main.member_num END) AS participant_count,
+        COUNT(CASE WHEN thread_main.thread_status = true THEN thread_main.thread_content END) AS total_comments
       FROM thread
       JOIN book ON thread.book_id = book.book_id
       LEFT JOIN thread_main ON thread.thread_num = thread_main.thread_num
@@ -37,7 +37,6 @@ exports.getThreadDetail = async (req, res) => {
       day: "2-digit",
       hour: "numeric",
       minute: "numeric",
-      second: "numeric",
       hour12: true,
     });
 
@@ -69,6 +68,11 @@ exports.createThreadComment = async (req, res) => {
     }
 
     // 댓글 길이 제한 확인
+    if (!thread_content || thread_content.length < 10) {
+      return res
+        .status(400)
+        .json({ message: "댓글은 최소 10자 이상 작성해야 합니다." });
+    }
     if (thread_content.length > 300) {
       return res
         .status(400)
@@ -96,7 +100,7 @@ exports.createThreadComment = async (req, res) => {
   }
 };
 
-// 대댓글 작성 함수
+// 대댓글 작성
 exports.createThreadReply = async (req, res) => {
   const { member_num, thread_content_num2, thread_content } = req.body;
 
@@ -112,6 +116,11 @@ exports.createThreadReply = async (req, res) => {
     }
 
     // 대댓글 길이 제한
+    if (!thread_content || thread_content.length < 10) {
+      return res
+        .status(400)
+        .json({ message: "대댓글은 최소 10자 이상 작성해야 합니다." });
+    }
     if (thread_content.length > 300) {
       return res
         .status(400)
@@ -156,13 +165,12 @@ exports.createThreadReply = async (req, res) => {
   }
 };
 
-// 댓글 및 대댓글 조회
+// 부모 댓글 조회
 exports.getThreadComment = async (req, res) => {
   const { thread_num } = req.params;
   const { offset = 0, limit = 5 } = req.query;
 
   try {
-    // 부모 댓글 쿼리 (상태값이 True/False 모두 가져옴)
     const parentCommentsQuery = `
       SELECT 
         thread_main.thread_content_num,
@@ -178,6 +186,7 @@ exports.getThreadComment = async (req, res) => {
       JOIN member ON thread_main.member_num = member.member_num
       WHERE thread_main.thread_num = $1 
         AND thread_main.thread_content_num2 IS NULL
+        AND thread_main.thread_status = true -- 부모 댓글 상태가 True인 경우만 가져오기
       ORDER BY thread_main.thread_content_created_at DESC
       OFFSET $2 LIMIT $3
     `;
@@ -187,84 +196,85 @@ exports.getThreadComment = async (req, res) => {
       parentCommentsValues
     );
 
-    const comments = await Promise.all(
-      parentCommentsResult.rows.map(async (comment) => {
-        const is_active = comment.thread_status;
-
-        // 대댓글 쿼리 (True 상태인 것만 최신순으로 가져오기)
-        const repliesQuery = `
-          SELECT 
-            thread_main.thread_content_num,
-            thread_main.member_num,
-            member.member_nickname,
-            thread_main.thread_content,
-            thread_main.thread_content_created_at,
-            thread_main.thread_status
-          FROM thread_main
-          JOIN member ON thread_main.member_num = member.member_num
-          WHERE thread_main.thread_content_num2 = $1 
-            AND thread_main.thread_status = true
-          ORDER BY thread_main.thread_content_created_at DESC
-          LIMIT 2 -- 최신 2개의 대댓글만 가져오기
-        `;
-        const repliesValues = [comment.thread_content_num];
-        const repliesResult = await database.query(repliesQuery, repliesValues);
-
-        // 대댓글 데이터 변환
-        const replies = repliesResult.rows.map((reply) => ({
-          thread_content_num: reply.thread_content_num,
-          member_nickname: reply.member_nickname,
-          thread_content: reply.thread_content,
-          created_at: new Date(reply.thread_content_created_at).toLocaleString(
-            "ko-KR",
-            {
-              year: "numeric",
-              month: "2-digit",
-              day: "2-digit",
-              hour: "numeric",
-              minute: "numeric",
-              second: "numeric",
-              hour12: false,
-            }
-          ),
-        }));
-
-        return {
-          thread_content_num: comment.thread_content_num,
-          member_nickname: comment.member_nickname,
-          thread_content: is_active
-            ? comment.thread_content
-            : "삭제된 댓글입니다",
-          created_at: new Date(
-            comment.thread_content_created_at
-          ).toLocaleString("ko-KR", {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-            hour: "numeric",
-            minute: "numeric",
-            second: "numeric",
-            hour12: false,
-          }),
-          is_active,
-          reply_count: comment.reply_count, // 총 대댓글 개수
-          replies, // 최신 2개의 대댓글
-        };
-      })
-    );
+    const comments = parentCommentsResult.rows.map((comment) => ({
+      thread_content_num: comment.thread_content_num,
+      member_nickname: comment.member_nickname,
+      thread_content: comment.thread_content,
+      created_at: new Date(comment.thread_content_created_at).toLocaleString(
+        "ko-KR",
+        {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "numeric",
+          minute: "numeric",
+          hour12: true,
+        }
+      ),
+      is_active: comment.thread_status,
+      reply_count: comment.reply_count, // 총 대댓글 개수
+    }));
 
     res.status(200).json({ comments });
   } catch (error) {
-    console.error("Error fetching comments:", error);
+    console.error("Error fetching parent comments:", error);
     res
       .status(500)
-      .json({ message: "댓글 목록을 가져오는 중 오류가 발생했습니다." });
+      .json({ message: "부모 댓글을 가져오는 중 오류가 발생했습니다." });
   }
 };
 
-// 댓글 및 대댓글 삭제 함수
+// 대댓글 조회
+exports.getCommentReply = async (req, res) => {
+  const { thread_content_num2 } = req.params;
+
+  try {
+    const repliesQuery = `
+      SELECT 
+        thread_main.thread_content_num,
+        thread_main.member_num,
+        member.member_nickname,
+        thread_main.thread_content,
+        thread_main.thread_content_created_at,
+        thread_main.thread_status
+      FROM thread_main
+      JOIN member ON thread_main.member_num = member.member_num
+      WHERE thread_main.thread_content_num2 = $1 
+        AND thread_main.thread_status = true -- 대댓글 상태가 True인 경우만 가져오기
+      ORDER BY thread_main.thread_content_created_at DESC
+    `;
+    const repliesValues = [thread_content_num2];
+
+    const repliesResult = await database.query(repliesQuery, repliesValues);
+
+    const replies = repliesResult.rows.map((reply) => ({
+      thread_content_num: reply.thread_content_num,
+      member_nickname: reply.member_nickname,
+      thread_content: reply.thread_content,
+      created_at: new Date(reply.thread_content_created_at).toLocaleString(
+        "ko-KR",
+        {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "numeric",
+          minute: "numeric",
+          hour12: true,
+        }
+      ),
+    }));
+
+    res.status(200).json({ replies });
+  } catch (error) {
+    console.error("Error fetching comment replies:", error);
+    res
+      .status(500)
+      .json({ message: "대댓글을 가져오는 중 오류가 발생했습니다." });
+  }
+};
+
 exports.deleteThreadComment = async (req, res) => {
-  const { commentId } = req.params; // 댓글의 ID (또는 대댓글의 ID)
+  const { thread_content_num } = req.params; // 댓글의 ID (또는 대댓글의 ID)
   const { member_num } = req.body; // 요청한 사용자 정보
 
   try {
@@ -273,9 +283,14 @@ exports.deleteThreadComment = async (req, res) => {
       SELECT * FROM thread_main WHERE thread_content_num = $1 AND member_num = $2
     `;
     const authorCheckResult = await database.query(authorCheckQuery, [
-      commentId,
+      thread_content_num,
       member_num,
     ]);
+
+    console.log("Received thread_content_num:", thread_content_num);
+    console.log("Received member_num:", member_num);
+
+    console.log("authorCheckResult:", authorCheckResult.rows); // 쿼리 결과를 로그로 출력
 
     if (authorCheckResult.rows.length === 0) {
       return res
@@ -287,7 +302,51 @@ exports.deleteThreadComment = async (req, res) => {
     const deleteQuery = `
       UPDATE thread_main SET thread_status = false WHERE thread_content_num = $1
     `;
-    await database.query(deleteQuery, [commentId]);
+    await database.query(deleteQuery, [thread_content_num]);
+
+    // 부모 댓글인지 확인하고, 부모 댓글이라면 대댓글들도 false 상태로 업데이트
+    const checkParentCommentQuery = `
+      SELECT thread_content_num2, thread_num FROM thread_main WHERE thread_content_num = $1
+    `;
+    const checkParentCommentResult = await database.query(
+      checkParentCommentQuery,
+      [thread_content_num]
+    );
+
+    const { thread_content_num2, thread_num } =
+      checkParentCommentResult.rows[0];
+
+    if (thread_content_num2 === null) {
+      // 부모 댓글인 경우 해당 댓글의 대댓글들 모두 false 상태로 변경
+      const updateRepliesStatusQuery = `
+        UPDATE thread_main 
+        SET thread_status = false 
+        WHERE thread_content_num2 = $1
+      `;
+      await database.query(updateRepliesStatusQuery, [thread_content_num]);
+
+      // 부모 댓글 개수를 확인하여, 부모 댓글이 0개일 경우 스레드 삭제
+      const parentCommentCountQuery = `
+        SELECT COUNT(*) AS parent_count
+        FROM thread_main
+        WHERE thread_num = $1 AND thread_content_num2 IS NULL AND thread_status = true
+      `;
+      const parentCountResult = await database.query(parentCommentCountQuery, [
+        thread_num,
+      ]);
+      const parentCount = parseInt(parentCountResult.rows[0].parent_count, 10);
+
+      if (parentCount === 0) {
+        const deleteThreadQuery = `
+          DELETE FROM thread WHERE thread_num = $1
+        `;
+        await database.query(deleteThreadQuery, [thread_num]);
+        return res.status(200).json({
+          message:
+            "댓글이 삭제되었으며 스레드에 더 이상 댓글이 없어 스레드도 삭제되었습니다.",
+        });
+      }
+    }
 
     res.status(200).json({ message: "댓글이 성공적으로 삭제되었습니다." });
   } catch (error) {
