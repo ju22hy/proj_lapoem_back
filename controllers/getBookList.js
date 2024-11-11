@@ -198,7 +198,7 @@ exports.getTopBooks = async (req, res) => {
       LEFT JOIN book_review AS br ON b.book_id = br.book_id
       WHERE b.book_status IS NOT false -- Exclude books with status 'false'
       GROUP BY b.book_id
-      ORDER BY average_rating DESC, review_count DESC -- Sort by highest rating and review count
+      ORDER BY review_count DESC, average_rating DESC -- Sort by review count first, then by rating
       LIMIT $1; -- Limit to top N books (e.g., 10)
     `;
 
