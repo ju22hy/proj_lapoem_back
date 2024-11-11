@@ -340,7 +340,6 @@ exports.deleteCommunityPost = async (req, res) => {
   const { postId } = req.params;
 
   try {
-    // 1. 댓글 상태와 소프트 삭제 업데이트
     await pool.query(
       `UPDATE community_comment
        SET comment_deleted_at = NOW(), comment_status = 'deleted'
@@ -348,7 +347,6 @@ exports.deleteCommunityPost = async (req, res) => {
       [postId]
     );
 
-    // 2. 게시글 상태와 소프트 삭제 업데이트
     const result = await pool.query(
       `UPDATE community
        SET post_deleted_at = NOW(), post_status = 'deleted'
