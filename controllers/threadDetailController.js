@@ -50,6 +50,7 @@ exports.getThreadDetail = async (req, res) => {
   }
 };
 
+// 스레드 댓글 작성
 exports.createThreadComment = async (req, res) => {
   try {
     const { member_num, thread_content } = req.body;
@@ -172,6 +173,10 @@ exports.getThreadComment = async (req, res) => {
   const { offset = 0, limit = 5 } = req.query;
 
   try {
+    // 기본 댓글 조회 쿼리
+    console.log("Received offset:", offset); // 요청된 오프셋 로그
+    console.log("Received limit:", limit); // 요청된 제한 로그
+
     const parentCommentsQuery = `
       SELECT 
         thread_main.thread_content_num,
@@ -191,14 +196,19 @@ exports.getThreadComment = async (req, res) => {
       ORDER BY thread_main.thread_content_created_at DESC
       OFFSET $2 LIMIT $3
     `;
+
     const parentCommentsValues = [thread_num, offset, limit];
     const parentCommentsResult = await database.query(
       parentCommentsQuery,
       parentCommentsValues
     );
 
+    console.log("Query returned rows:", parentCommentsResult.rows.length); // 쿼리 결과 행 수
+    console.log("Query results:", parentCommentsResult.rows); // 쿼리 결과 로그
+
     const comments = parentCommentsResult.rows.map((comment) => ({
       thread_content_num: comment.thread_content_num,
+      member_num: comment.member_num,
       member_nickname: comment.member_nickname,
       thread_content: comment.thread_content,
       created_at: new Date(comment.thread_content_created_at).toLocaleString(
@@ -216,7 +226,16 @@ exports.getThreadComment = async (req, res) => {
       reply_count: comment.reply_count, // 총 대댓글 개수
     }));
 
-    res.status(200).json({ comments });
+    // 결과와 함께 전체 댓글이 더 있는지 여부 확인
+    const hasMoreQuery = `
+      SELECT COUNT(*) FROM thread_main
+      WHERE thread_num = $1 AND thread_content_num2 IS NULL AND thread_status = true
+    `;
+    const hasMoreResult = await database.query(hasMoreQuery, [thread_num]);
+    const totalCommentsCount = parseInt(hasMoreResult.rows[0].count, 10);
+    const hasMore = offset + limit < totalCommentsCount;
+
+    res.status(200).json({ comments, hasMore });
   } catch (error) {
     console.error("Error fetching parent comments:", error);
     res
