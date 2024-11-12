@@ -50,11 +50,12 @@ exports.getThreadDetail = async (req, res) => {
   }
 };
 
-// 댓글 작성
 exports.createThreadComment = async (req, res) => {
   try {
     const { member_num, thread_content } = req.body;
     const { thread_num } = req.params;
+
+    console.log("Received member_num:", member_num); // member_num 확인용 로그
 
     // 로그인 여부 확인
     const userCheckQuery = `
