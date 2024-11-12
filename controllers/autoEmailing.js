@@ -1,4 +1,14 @@
 const database = require('../database/database');
+const nodemailer = require('nodemailer');
+
+// ===============이메일 전송 설정========================
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER, // 이메일 계정
+    pass: process.env.EMAIL_PASS, // 이메일 비밀번호 또는 앱 비밀번호
+  },
+});
 
 // =================신간 도서 등록=======================
 exports.postNewBooks = async (req, res) => {
@@ -102,6 +112,52 @@ exports.postNewBooks = async (req, res) => {
 
     const { rows } = await database.query(query, values);
     const newBook = rows[0];
+
+    // =============마케팅 동의한 사용자 이메일 목록 가져오기=============
+    const userQuery = `
+      SELECT member_email
+      FROM member
+      WHERE marketing_consent = TRUE
+    `;
+
+    const { rows: users } = await database.query(userQuery);
+
+    // ===============이메일 보내기==================
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      subject: `라보엠(LaPoem)에서 신간 도서 "${book_title}"가 등록되었습니다!`,
+      html: `
+    <div style="font-family: 'Arial', sans-serif; padding: 20px; background-color: #f4f4f9; color: #333;">
+      <header style="text-align: center; margin-bottom: 20px;">
+        <img src="https://ibb.co/RDqqnL0" alt="LaPoem Logo" style="width: 150px;">
+        <h1 style="font-size: 24px; color: #2c3e50;">신간 도서가 등록되었습니다!</h1>
+      </header>
+
+      <section style="display: flex; flex-wrap: wrap; justify-content: space-around; margin-top: 30px;">
+        <div style="flex: 1; max-width: 350px; padding: 10px;">
+          <img src="${book_cover}" alt="Book Cover" style="width: 100%; height: auto; border-radius: 8px;">
+        </div>
+
+        <div style="flex: 1; max-width: 500px; padding: 10px; line-height: 1.6;">
+          <p style="font-size: 18px; margin-bottom: 10px;"><strong>제목:</strong> ${book_title}</p>
+          <p style="font-size: 16px; margin-bottom: 10px;"><strong>저자:</strong> ${book_author}</p>
+          <p style="font-size: 16px; margin-bottom: 10px;"><strong>출판사:</strong> ${book_publisher}</p>
+          <p style="font-size: 16px; margin-bottom: 20px;"><strong>책 소개:</strong> ${book_description}</p>
+        </div>
+      </section>
+
+      <footer style="text-align: center; margin-top: 40px; font-size: 16px;">
+        <p>더 자세한 정보는 라보엠에 접속하셔서 확인해보세요.</p>
+        <p><a href="https://example.com" style="color: #3498db; text-decoration: none; font-weight: bold;">라보엠 사이트 방문하기</a></p>
+      </footer>
+    </div>
+  `,
+    };
+
+    for (const user of users) {
+      mailOptions.to = user.member_email;
+      await transporter.sendMail(mailOptions);
+    }
 
     return res.status(201).json({
       message: 'New book added successfully.',
