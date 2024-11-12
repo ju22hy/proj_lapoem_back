@@ -167,12 +167,11 @@ exports.getBookByCategory = async (req, res) => {
   }
 };
 
-
 // ======================가장 점수가 높고 리뷰가 많은 책============================
 exports.getTopBooks = async (req, res) => {
   try {
-    const limit = 10; // Set a fixed limit for top books (adjust as needed)
-    
+    const limit = 5; // Set a fixed limit for top books (adjust as needed)
+
     // Modify query to sort by highest rating and review count
     let query = `
       SELECT 
