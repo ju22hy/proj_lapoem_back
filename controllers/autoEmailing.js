@@ -24,10 +24,12 @@ exports.postNewBooks = async (req, res) => {
     book_title,
     book_author,
     genre_tag_name,
+    sent_email = false, // 이메일 발송 여부를 결정하는 필드
   } = req.body;
 
   // book_price에 "원" 자동 추가
-  const formattedBookPrice = typeof book_price === 'number' ? `${book_price}원` : book_price;
+  const formattedBookPrice =
+    typeof book_price === 'number' ? `${book_price}원` : book_price;
 
   // genre_tag_name과 genre_tag_id 매칭
   const genreMapping = {
@@ -68,7 +70,9 @@ exports.postNewBooks = async (req, res) => {
     !genre_tag_name ||
     !genre_tag_id
   ) {
-    return res.status(400).json({ message: 'All fields are required or invalid genre_tag_name.' });
+    return res
+      .status(400)
+      .json({ message: 'All fields are required or invalid genre_tag_name.' });
   }
 
   try {
@@ -86,9 +90,10 @@ exports.postNewBooks = async (req, res) => {
         book_title, 
         book_author, 
         genre_tag_name, 
-        genre_tag_id
+        genre_tag_id,
+        sent_email
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, NOW(), $7, $8, $9, $10, $11, $12
+        $1, $2, $3, $4, $5, $6, NOW(), $7, $8, $9, $10, $11, $12, $13
       ) RETURNING *
     `;
 
@@ -105,25 +110,29 @@ exports.postNewBooks = async (req, res) => {
       book_author,
       genre_tag_name,
       genre_tag_id,
+      sent_email,
     ];
 
     const { rows } = await database.query(query, values);
     const newBook = rows[0];
 
-    // =============마케팅 동의한 사용자 이메일 목록 가져오기=============
-    const userQuery = `
-      SELECT member_email
-      FROM member
-      WHERE marketing_consent = TRUE
-    `;
+    // ==============이메일 발송 여부 확인==================
+    if (sent_email) {
+      // sent_email이 true인 경우에만 이메일 발송
+      // 마케팅 동의한 사용자 이메일 목록 가져오기
+      const userQuery = `
+        SELECT member_email
+        FROM member
+        WHERE marketing_consent = TRUE
+      `;
 
-    const { rows: users } = await database.query(userQuery);
+      const { rows: users } = await database.query(userQuery);
 
-    // ===============이메일 보내기==================
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      subject: `라보엠(LaPoem)에서 신간 도서 알림이 도착했습니다. -  "${book_title}" 도서가 등록되었습니다.`,
-      html: `
+      // ===============이메일 보내기==================
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        subject: `라보엠(LaPoem)에서 신간 도서 알림이 도착했습니다. -  "${book_title}" 도서가 등록되었습니다.`,
+        html: `
     <div style="font-family: 'Arial', sans-serif; padding: 20px; background-color: #f4f4f9; color: #333;">
       <header style="text-align: center; margin-bottom: 20px;">
         <img src="https://ibb.co/RDqqnL0" alt="LaPoem Logo" style="width: 150px;">
@@ -149,11 +158,13 @@ exports.postNewBooks = async (req, res) => {
       </footer>
     </div>
   `,
-    };
+      };
 
-    for (const user of users) {
-      mailOptions.to = user.member_email;
-      await transporter.sendMail(mailOptions);
+      // 마케팅 동의를 한 사용자들에게 이메일 발송
+      for (const user of users) {
+        mailOptions.to = user.member_email;
+        await transporter.sendMail(mailOptions);
+      }
     }
 
     return res.status(201).json({
@@ -162,6 +173,8 @@ exports.postNewBooks = async (req, res) => {
     });
   } catch (error) {
     console.error('Error adding new book:', error);
-    return res.status(500).json({ message: 'Failed to add new book.', error: error.message });
+    return res
+      .status(500)
+      .json({ message: 'Failed to add new book.', error: error.message });
   }
 };
