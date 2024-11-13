@@ -102,7 +102,12 @@ exports.getThreads = async (req, res) => {
           book.book_author, 
           book.book_publisher, 
           book.book_cover,
-          COUNT(DISTINCT thread_main.member_num) AS participant_count
+          (
+            SELECT COUNT(DISTINCT thread_main.member_num)
+            FROM thread_main
+            WHERE thread_main.thread_num = thread.thread_num
+              AND thread_main.thread_status = true
+          ) AS participant_count
         FROM 
           thread
         LEFT JOIN 
@@ -138,7 +143,12 @@ exports.getThreads = async (req, res) => {
           book.book_author, 
           book.book_publisher, 
           book.book_cover,
-          COUNT(thread_main.member_num) AS participant_count
+          (
+            SELECT COUNT(DISTINCT thread_main.member_num)
+            FROM thread_main
+            WHERE thread_main.thread_num = thread.thread_num
+              AND thread_main.thread_status = true
+          ) AS participant_count
         FROM 
           thread
         LEFT JOIN 
