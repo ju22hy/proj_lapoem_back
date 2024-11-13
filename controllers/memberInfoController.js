@@ -219,24 +219,55 @@ const updateMemberInfo = async (req, res) => {
 
 // =====================================================
 
-// + 회원 탈퇴 함수 호출 시 thread_main 테이블에서, 현재 thread 테이블에 존재하지 않는 thread_num을 참조하는 댓글과 대댓글을 삭제합니다. thread_num이 thread 테이블에 없는 경우, 해당 thread_num을 가진 thread_main 테이블의 모든 행을 삭제합니다. (소프트 삭제 아님)
+// 회원 탈퇴 함수 호출 시 작동합니다.
 
-// 부모 댓글 상태가 True인 것이 하나도 없을 경우 스레드는 바로 삭제되는데 댓글 및 대댓글은 소프트 삭제 처리만 되다 보니 테스트 하면서 댓글 및 대댓글 데이터가 DB에 너무 많이 쌓여서 만든 함수입니다.
+// 1. 활성 댓글이 없는 스레드를 삭제합니다.(deleteEmptyThreadsQuery)
+// - thread_main에서 활성 상태(thread_status=true) 댓글이 없는 스레드를 찾아 삭제합니다.
 
-// 소프트 삭제 처리된 데이터(즉, thread_main의 thread_status가 false인 데이터)는 여전히 thread 테이블에 thread_num이 존재하면 삭제되지 않습니다.
+// 2. 존재하지 않는 스레드의 댓글과 대댓글을 삭제합니다.(deleteDisconnectedCommentsQuery)
+// - thread 테이블에 없는 thread_num을 참조하는 모든 댓글과 대댓글을 삭제합니다.
 
-// 존재하지 않는 스레드의 댓글 및 대댓글을 삭제하는 함수
+// 주의: 이 함수는 소프트 삭제가 아닌 실제 데이터 삭제를 수행합니다.
+// thread_main의 thread_status가 false로 설정된 소프트 삭제된 댓글 및 대댓글은 해당 스레드가 thread 테이블에 존재하는 한 삭제되지 않습니다.
+
 const cleanUpThreads = async () => {
   try {
-    const deleteOrphanedCommentsQuery = `
+    // 1. 활성 댓글이 없는 스레드를 삭제
+    const deleteEmptyThreadsQuery = `
+      DELETE FROM thread
+      WHERE thread_num IN (
+        SELECT t.thread_num
+        FROM thread t
+        LEFT JOIN thread_main tm ON t.thread_num = tm.thread_num
+        GROUP BY t.thread_num
+        HAVING COUNT(CASE WHEN tm.thread_status = true THEN 1 END) = 0
+      )
+    `;
+    const deleteEmptyThreadsResult = await database.query(
+      deleteEmptyThreadsQuery
+    );
+    console.log(
+      "Deleted threads with no active comments:",
+      deleteEmptyThreadsResult.rowCount
+    );
+
+    // 2. 존재하지 않는 스레드의 댓글 및 대댓글 삭제
+    const deleteDisconnectedCommentsQuery = `
       DELETE FROM thread_main
       WHERE thread_num NOT IN (SELECT thread_num FROM thread)
     `;
-
-    const result = await database.query(deleteOrphanedCommentsQuery);
-    console.log("Deleted orphaned comments:", result.rowCount);
+    const deleteDisconnectedCommentsResult = await database.query(
+      deleteDisconnectedCommentsQuery
+    );
+    console.log(
+      "Deleted disconnected comments:",
+      deleteDisconnectedCommentsResult.rowCount
+    );
   } catch (error) {
-    console.error("Error cleaning up orphaned comments:", error);
+    console.error(
+      "Error cleaning up threads and disconnected comments:",
+      error
+    );
   }
 };
 
