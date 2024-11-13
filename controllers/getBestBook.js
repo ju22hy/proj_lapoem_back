@@ -1,4 +1,4 @@
-const database = require("../database/database");
+const database = require('../database/database');
 
 exports.getBestBook = async (req, res) => {
   try {
@@ -15,6 +15,7 @@ exports.getBestBook = async (req, res) => {
         book
       LEFT JOIN 
         book_review ON book.book_id = book_review.book_id      -- LEFT JOIN을 사용해 리뷰가 없는 책도 포함
+        AND book_review.review_status != 'inactive'
       WHERE 
         book.publish_date IS NOT NULL                          -- 출판일이 NULL이 아닌 책만 포함
         AND book.is_book_best = true                           -- best 책만 포함
@@ -27,15 +28,15 @@ exports.getBestBook = async (req, res) => {
 
     // 데이터가 없는 경우 404 응답
     if (bestBooks.length === 0) {
-      return res.status(404).json({ message: "No best books found" });
+      return res.status(404).json({ message: 'No best books found' });
     }
 
     // 데이터를 성공적으로 가져온 경우 200 응답
     return res.status(200).json(bestBooks);
   } catch (error) {
-    console.error("Error fetching best books:", error);
+    console.error('Error fetching best books:', error);
     return res
       .status(500)
-      .json({ message: "Failed to fetch best books", error: error.message });
+      .json({ message: 'Failed to fetch best books', error: error.message });
   }
 };
