@@ -17,16 +17,26 @@ exports.joinUser = async (req, res) => {
     } = req.body;
 
     // 아이디, 닉네임, 이메일 중복 체크
-    const idCheck = await database.query('SELECT member_num FROM member WHERE member_id = $1', [member_id]);
-    if (idCheck.rows.length > 0) return res.status(409).json({ message: '이미 존재하는 아이디입니다.' });
+    const idCheck = await database.query(
+      'SELECT member_num FROM member WHERE member_id = $1',
+      [member_id]
+    );
+    if (idCheck.rows.length > 0)
+      return res.status(409).json({ message: '이미 존재하는 아이디입니다.' });
 
-    const nicknameCheck = await database.query('SELECT member_num FROM member WHERE member_nickname = $1', [
-      member_nickname,
-    ]);
-    if (nicknameCheck.rows.length > 0) return res.status(409).json({ message: '이미 존재하는 닉네임입니다.' });
+    const nicknameCheck = await database.query(
+      'SELECT member_num FROM member WHERE member_nickname = $1',
+      [member_nickname]
+    );
+    if (nicknameCheck.rows.length > 0)
+      return res.status(409).json({ message: '이미 존재하는 닉네임입니다.' });
 
-    const emailCheck = await database.query('SELECT member_num FROM member WHERE member_email = $1', [member_email]);
-    if (emailCheck.rows.length > 0) return res.status(409).json({ message: '이미 존재하는 이메일입니다.' });
+    const emailCheck = await database.query(
+      'SELECT member_num FROM member WHERE member_email = $1',
+      [member_email]
+    );
+    if (emailCheck.rows.length > 0)
+      return res.status(409).json({ message: '이미 존재하는 이메일입니다.' });
 
     // 비밀번호 암호화 및 회원 정보 저장
     const hashedPassword = await bcrypt.hash(member_password, 10);
@@ -45,7 +55,10 @@ exports.joinUser = async (req, res) => {
       ]
     );
 
-    res.status(201).json({ message: '회원가입이 완료되었습니다.', userId: result.rows[0].member_num });
+    res.status(201).json({
+      message: '회원가입이 완료되었습니다.',
+      userId: result.rows[0].member_num,
+    });
   } catch (error) {
     console.error('회원가입 오류:', error.message);
     res.status(500).json({ error: error.message });
@@ -55,7 +68,9 @@ exports.joinUser = async (req, res) => {
 // 약관 조회
 exports.getTerms = async (req, res) => {
   try {
-    const result = await database.query('SELECT * FROM term WHERE terms_deleted_at IS NULL ORDER BY terms_id');
+    const result = await database.query(
+      'SELECT * FROM term WHERE terms_deleted_at IS NULL ORDER BY terms_id'
+    );
     res.json(result.rows);
   } catch (error) {
     console.error('약관 조회 오류:', error.message);
@@ -76,7 +91,11 @@ exports.saveAgreement = async (req, res) => {
     `;
 
     for (const agreement of agreements) {
-      await database.query(queryText, [agreement.member_num, agreement.terms_id, agreement.agreement_status]);
+      await database.query(queryText, [
+        agreement.member_num,
+        agreement.terms_id,
+        agreement.agreement_status,
+      ]);
     }
     res.status(200).json({ message: '약관 동의 내역이 저장되었습니다.' });
   } catch (error) {
@@ -89,12 +108,30 @@ exports.saveAgreement = async (req, res) => {
 exports.loginUser = async (req, res) => {
   try {
     const { member_id, member_password } = req.body;
-    const { rows } = await database.query('SELECT * FROM member WHERE member_id = $1', [member_id]);
+    const { rows } = await database.query(
+      'SELECT * FROM member WHERE member_id = $1',
+      [member_id]
+    );
 
-    if (!rows.length) return res.status(404).json({ message: '아이디/비밀번호를 확인해주세요' });
+    if (!rows.length)
+      return res
+        .status(404)
+        .json({ message: '아이디/비밀번호를 확인해주세요' });
 
-    const isValidPassword = await bcrypt.compare(member_password, rows[0].member_password);
-    if (!isValidPassword) return res.status(401).json({ message: '아이디/비밀번호를 확인해주세요' });
+    const isValidPassword = await bcrypt.compare(
+      member_password,
+      rows[0].member_password
+    );
+    if (!isValidPassword)
+      return res
+        .status(401)
+        .json({ message: '아이디/비밀번호를 확인해주세요' });
+
+    // 회원 상태 확인
+    const member_status = rows[0].member_status;
+    if (member_status === 'inactive') {
+      return res.status(403).json({ message: '이미 탈퇴한 계정입니다.' });
+    }
 
     // JWT 토큰 생성
     const user = {
@@ -106,7 +143,11 @@ exports.loginUser = async (req, res) => {
     const token = jwt.sign(user, process.env.SECRET_KEY, { expiresIn: '1d' });
 
     // 쿠키에 토큰 설정
-    res.cookie('token', token, { httpOnly: true, sameSite: 'Strict', secure: process.env.NODE_ENV === 'production' });
+    res.cookie('token', token, {
+      httpOnly: true,
+      sameSite: 'Strict',
+      secure: process.env.NODE_ENV === 'production',
+    });
     res.status(200).json({ message: 'Login successful', user });
   } catch (error) {
     console.error('로그인 오류:', error.message);
@@ -120,7 +161,8 @@ exports.verifyToken = (req, res) => {
   if (!token) return res.status(401).json({ message: 'Unauthorized' });
 
   jwt.verify(token, process.env.SECRET_KEY, (err, decoded) => {
-    if (err) return res.status(401).json({ message: 'Token is invalid or expired' });
+    if (err)
+      return res.status(401).json({ message: 'Token is invalid or expired' });
     res.status(200).json({ user: decoded });
   });
 };
@@ -128,6 +170,10 @@ exports.verifyToken = (req, res) => {
 // 로그아웃
 exports.logoutUser = (req, res) => {
   // 쿠키에서 토큰 삭제
-  res.clearCookie('token', { httpOnly: true, sameSite: 'Strict', secure: process.env.NODE_ENV === 'production' });
+  res.clearCookie('token', {
+    httpOnly: true,
+    sameSite: 'Strict',
+    secure: process.env.NODE_ENV === 'production',
+  });
   res.status(200).json({ message: 'Logout successful' });
 };

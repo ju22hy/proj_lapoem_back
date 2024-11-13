@@ -2,14 +2,35 @@ const database = require('../database/database');
 const jwt = require('jsonwebtoken');
 
 // JWT를 사용해 로그인 상태를 확인하는 미들웨어
-const verifyInfoToken = (req, res, next) => {
-  const token = req.cookies.token;
-  if (!token) return res.status(401).json({ message: 'Unauthorized' });
+// const verifyInfoToken = (req, res, next) => {
+//   const token = req.cookies.token;
+//   if (!token) return res.status(401).json({ message: 'Unauthorized' });
 
-  jwt.verify(token, process.env.SECRET_KEY, (err, decoded) => {
-    if (err)
+//   jwt.verify(token, process.env.SECRET_KEY, (err, decoded) => {
+//     if (err)
+//       return res.status(401).json({ message: 'Token is invalid or expired' });
+//     req.user = decoded; // 인증된 사용자 정보 저장
+//     next();
+//   });
+// };
+
+const verifyInfoToken = (req, res, next) => {
+  const token = req.cookies.token || req.headers['authorization'];
+
+  if (!token) {
+    console.error('No token provided');
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+
+  const actualToken = token.startsWith('Bearer ') ? token.split(' ')[1] : token;
+
+  jwt.verify(actualToken, process.env.SECRET_KEY, (err, decoded) => {
+    if (err) {
+      console.error('Token verification failed:', err);
       return res.status(401).json({ message: 'Token is invalid or expired' });
+    }
     req.user = decoded; // 인증된 사용자 정보 저장
+    console.log('Token decoded successfully:', decoded);
     next();
   });
 };
@@ -85,10 +106,16 @@ const updateMemberInfo = async (req, res) => {
     const { member_email, member_phone, member_nickname, marketing_consent } =
       req.body;
 
-      // 1. 이메일 유효성 검사
-    if (!member_email || !member_email.includes('@') || /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(member_email)) {
-      return res.status(400).json({ message: 'Invalid email format or Korean characters detected' });
-      }
+    // 1. 이메일 유효성 검사
+    if (
+      !member_email ||
+      !member_email.includes('@') ||
+      /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(member_email)
+    ) {
+      return res.status(400).json({
+        message: 'Invalid email format or Korean characters detected',
+      });
+    }
 
     // 2. 이메일 중복 검사
     const checkEmailQuery = `
@@ -96,19 +123,34 @@ const updateMemberInfo = async (req, res) => {
       FROM member 
       WHERE member_email = $1 AND member_num != $2;
     `;
-    const checkEmailResult = await database.query(checkEmailQuery, [member_email, member_num]);
+    const checkEmailResult = await database.query(checkEmailQuery, [
+      member_email,
+      member_num,
+    ]);
     if (checkEmailResult.rows.length > 0) {
       return res.status(400).json({ message: 'Email is already in use' });
     }
 
     // 3. 닉네임 유효성 검사
-    if (!member_nickname || member_nickname.length < 1 || member_nickname.length > 20) {
-      return res.status(400).json({ message: 'Nickname must be between 1 and 20 characters' });
+    if (
+      !member_nickname ||
+      member_nickname.length < 1 ||
+      member_nickname.length > 20
+    ) {
+      return res
+        .status(400)
+        .json({ message: 'Nickname must be between 1 and 20 characters' });
     }
 
     // 4. 연락처 유효성 검사
-    if (!member_phone || member_phone.length !== 11 || !member_phone.startsWith('010')) {
-      return res.status(400).json({ message: 'Phone number must be 11 digits and start with 010' });
+    if (
+      !member_phone ||
+      member_phone.length !== 11 ||
+      !member_phone.startsWith('010')
+    ) {
+      return res
+        .status(400)
+        .json({ message: 'Phone number must be 11 digits and start with 010' });
     }
 
     const getCurrentNicknameQuery = `
@@ -178,7 +220,9 @@ const updateMemberInfo = async (req, res) => {
 //====================회원 탈퇴======================
 const deleteMembership = async (req, res) => {
   try {
-    const member_num = req.user.memberNum; // 인증된 사용자 ID 가져오기
+    // const member_num = req.user.memberNum;
+    const member_num = req.params.member_num; // 인증된 사용자 ID 가져오기
+    console.log('Received DELETE request for member:', req.params.member_num);
 
     // 회원 상태가 이미 inactive인지 확인
     const checkQuery = `
