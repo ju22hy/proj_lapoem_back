@@ -186,10 +186,90 @@ const deleteBookReview = async (req, res) => {
   }
 };
 
+// 백엔드 코드: 리뷰 작성자 및 평점 분포 API ===================================================
+const getReviewDistribution = async (req, res) => {
+  const { bookId } = req.params;
+
+  try {
+    const query = `
+      WITH age_groups AS (
+        SELECT
+          member_num,
+          CASE
+            WHEN EXTRACT(YEAR FROM AGE(NOW(), member_birth_date)) BETWEEN 10 AND 19 THEN '10대'
+            WHEN EXTRACT(YEAR FROM AGE(NOW(), member_birth_date)) BETWEEN 20 AND 29 THEN '20대'
+            WHEN EXTRACT(YEAR FROM AGE(NOW(), member_birth_date)) BETWEEN 30 AND 39 THEN '30대'
+            WHEN EXTRACT(YEAR FROM AGE(NOW(), member_birth_date)) BETWEEN 40 AND 49 THEN '40대'
+            WHEN EXTRACT(YEAR FROM AGE(NOW(), member_birth_date)) BETWEEN 50 AND 59 THEN '50대'
+            ELSE '60대 이상'
+          END AS age_group,
+          member_gender
+        FROM member
+      ),
+      review_info AS (
+        SELECT
+          r.rating,
+          m.age_group,
+          m.member_gender
+        FROM book_review r
+        JOIN age_groups m ON r.member_num = m.member_num
+        WHERE r.book_id = $1 AND r.review_status = 'active'
+      )
+      SELECT
+        -- 평점 분포
+        ARRAY[
+          (SELECT COUNT(*) FROM review_info WHERE rating = 2),
+          (SELECT COUNT(*) FROM review_info WHERE rating = 4),
+          (SELECT COUNT(*) FROM review_info WHERE rating = 6),
+          (SELECT COUNT(*) FROM review_info WHERE rating = 8),
+          (SELECT COUNT(*) FROM review_info WHERE rating = 10)
+        ] AS rating_distribution,
+        -- 나이 및 성별 분포
+        JSONB_BUILD_OBJECT(
+          'female', ARRAY[
+            (SELECT COUNT(*) FROM review_info WHERE member_gender = '여' AND age_group = '10대'),
+            (SELECT COUNT(*) FROM review_info WHERE member_gender = '여' AND age_group = '20대'),
+            (SELECT COUNT(*) FROM review_info WHERE member_gender = '여' AND age_group = '30대'),
+            (SELECT COUNT(*) FROM review_info WHERE member_gender = '여' AND age_group = '40대'),
+            (SELECT COUNT(*) FROM review_info WHERE member_gender = '여' AND age_group = '50대'),
+            (SELECT COUNT(*) FROM review_info WHERE member_gender = '여' AND age_group = '60대 이상')
+          ],
+          'male', ARRAY[
+            (SELECT COUNT(*) FROM review_info WHERE member_gender = '남' AND age_group = '10대'),
+            (SELECT COUNT(*) FROM review_info WHERE member_gender = '남' AND age_group = '20대'),
+            (SELECT COUNT(*) FROM review_info WHERE member_gender = '남' AND age_group = '30대'),
+            (SELECT COUNT(*) FROM review_info WHERE member_gender = '남' AND age_group = '40대'),
+            (SELECT COUNT(*) FROM review_info WHERE member_gender = '남' AND age_group = '50대'),
+            (SELECT COUNT(*) FROM review_info WHERE member_gender = '남' AND age_group = '60대 이상')
+          ]
+        ) AS gender_age_distribution
+      FROM review_info
+    `;
+
+    const result = await database.query(query, [bookId]);
+
+    if (result.rows.length === 0) {
+      return res.status(200).json({
+        rating_distribution: [0, 0, 0, 0, 0],
+        gender_age_distribution: {
+          female: [0, 0, 0, 0, 0, 0],
+          male: [0, 0, 0, 0, 0, 0],
+        },
+      });
+    }
+
+    return res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching review distribution:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 module.exports = {
   getBookDetail,
   getBookReviews,
   postBookReview,
   verifyToken,
   deleteBookReview,
+  getReviewDistribution,
 };
