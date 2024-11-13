@@ -102,7 +102,7 @@ exports.getThreads = async (req, res) => {
           book.book_author, 
           book.book_publisher, 
           book.book_cover,
-          COUNT(thread_main.member_num) AS participant_count
+          COUNT(DISTINCT thread_main.member_num) AS participant_count
         FROM 
           thread
         LEFT JOIN 
