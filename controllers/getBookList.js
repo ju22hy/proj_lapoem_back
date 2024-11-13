@@ -137,7 +137,9 @@ exports.getBookByCategory = async (req, res) => {
     LIMIT $2 OFFSET $3
   `;
 
-    const params = genre_tag_id ? [genre_tag_id, limit, offset] : [limit, offset]; // 파라미터 설정
+    const params = genre_tag_id
+      ? [genre_tag_id, limit, offset]
+      : [limit, offset]; // 파라미터 설정
     const { rows: books } = await database.query(query, params);
 
     // 총 도서 개수를 가져오는 쿼리
@@ -151,7 +153,9 @@ exports.getBookByCategory = async (req, res) => {
     const totalPages = Math.ceil(totalBooks / limit); // 총 페이지 수 계산
 
     if (books.length === 0) {
-      return res.status(404).json({ message: 'No books found for this category' });
+      return res
+        .status(404)
+        .json({ message: 'No books found for this category' });
     }
 
     res.status(200).json({
@@ -171,7 +175,7 @@ exports.getTopBooks = async (req, res) => {
   try {
     const limit = 5; // Set a fixed limit for top books (adjust as needed)
 
-    // Modify query to sort by highest rating and review count
+    // Modify query to calculate a combined score of review count and average rating
     let query = `
       SELECT 
         b.book_id,
@@ -187,18 +191,22 @@ exports.getTopBooks = async (req, res) => {
         b.genre_tag_id,
         b.is_book_best,
         b.book_status,
-        TO_CHAR(b.book_create_date, 'YYYY-MM-DD') AS book_create_date, -- 날짜 형식 변경
+        TO_CHAR(b.book_create_date, 'YYYY-MM-DD') AS book_create_date,
         CASE 
           WHEN AVG(CASE WHEN br.review_status = 'active' THEN br.rating END) IS NULL THEN 0 
           ELSE ROUND(AVG(CASE WHEN br.review_status = 'active' THEN br.rating END), 1) 
         END AS average_rating,
-        COUNT(CASE WHEN br.review_status = 'active' THEN br.rating END) AS review_count
+        COUNT(CASE WHEN br.review_status = 'active' THEN br.rating END) AS review_count,
+        (ROUND(AVG(CASE WHEN br.review_status = 'active' THEN br.rating END), 1) * 1.8) + 
+        (COUNT(CASE WHEN br.review_status = 'active' THEN br.rating END) * 1.0) AS score
       FROM book AS b
       LEFT JOIN book_review AS br ON b.book_id = br.book_id
-      WHERE b.book_status IS NOT false -- Exclude books with status 'false'
+      WHERE b.book_status IS NOT false
       GROUP BY b.book_id
-      ORDER BY review_count DESC, average_rating DESC -- Sort by review count first, then by rating
-      LIMIT $1; -- Limit to top N books (e.g., 10)
+      HAVING COUNT(CASE WHEN br.review_status = 'active' THEN br.rating END) > 0
+        AND ROUND(AVG(CASE WHEN br.review_status = 'active' THEN br.rating END), 1) >= 8
+      ORDER BY score DESC
+      LIMIT $1;
     `;
 
     // Parameters for the query
