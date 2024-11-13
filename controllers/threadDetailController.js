@@ -261,7 +261,7 @@ exports.getCommentReply = async (req, res) => {
       JOIN member ON thread_main.member_num = member.member_num
       WHERE thread_main.thread_content_num2 = $1 
         AND thread_main.thread_status = true -- 대댓글 상태가 True인 경우만 가져오기
-      ORDER BY thread_main.thread_content_created_at DESC
+      ORDER BY thread_main.thread_content_created_at ASC
     `;
     const repliesValues = [thread_content_num2];
 
@@ -269,6 +269,7 @@ exports.getCommentReply = async (req, res) => {
 
     const replies = repliesResult.rows.map((reply) => ({
       thread_content_num: reply.thread_content_num,
+      member_num: reply.member_num,
       member_nickname: reply.member_nickname,
       thread_content: reply.thread_content,
       created_at: new Date(reply.thread_content_created_at).toLocaleString(
