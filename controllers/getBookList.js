@@ -126,7 +126,8 @@ exports.getBookByCategory = async (req, res) => {
     LEFT JOIN 
       book_review AS br ON b.book_id = br.book_id -- book_review와 조인
     WHERE 
-      ${genre_tag_id ? `b.genre_tag_id = $1` : 'true'}
+      b.book_status IS DISTINCT FROM false -- book_status가 false인 책을 제외 241113_추가된 쿼리
+      ${genre_tag_id ? `AND b.genre_tag_id = $1` : ''} -- 카테고리 필터
     GROUP BY 
       b.book_id
     ORDER BY 
@@ -136,9 +137,7 @@ exports.getBookByCategory = async (req, res) => {
     LIMIT $2 OFFSET $3
   `;
 
-    const params = genre_tag_id
-      ? [genre_tag_id, limit, offset]
-      : [limit, offset]; // 파라미터 설정
+    const params = genre_tag_id ? [genre_tag_id, limit, offset] : [limit, offset]; // 파라미터 설정
     const { rows: books } = await database.query(query, params);
 
     // 총 도서 개수를 가져오는 쿼리
@@ -152,9 +151,7 @@ exports.getBookByCategory = async (req, res) => {
     const totalPages = Math.ceil(totalBooks / limit); // 총 페이지 수 계산
 
     if (books.length === 0) {
-      return res
-        .status(404)
-        .json({ message: 'No books found for this category' });
+      return res.status(404).json({ message: 'No books found for this category' });
     }
 
     res.status(200).json({

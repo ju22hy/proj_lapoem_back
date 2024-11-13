@@ -27,8 +27,7 @@ exports.postNewBooks = async (req, res) => {
   } = req.body;
 
   // book_price에 "원" 자동 추가
-  const formattedBookPrice =
-    typeof book_price === 'number' ? `${book_price}원` : book_price;
+  const formattedBookPrice = typeof book_price === 'number' ? `${book_price}원` : book_price;
 
   // genre_tag_name과 genre_tag_id 매칭
   const genreMapping = {
@@ -69,9 +68,7 @@ exports.postNewBooks = async (req, res) => {
     !genre_tag_name ||
     !genre_tag_id
   ) {
-    return res
-      .status(400)
-      .json({ message: 'All fields are required or invalid genre_tag_name.' });
+    return res.status(400).json({ message: 'All fields are required or invalid genre_tag_name.' });
   }
 
   try {
@@ -125,7 +122,7 @@ exports.postNewBooks = async (req, res) => {
     // ===============이메일 보내기==================
     const mailOptions = {
       from: process.env.EMAIL_USER,
-      subject: `라보엠(LaPoem)에서 신간 도서 "${book_title}"가 등록되었습니다!`,
+      subject: `라보엠(LaPoem)에서 신간 도서 알림이 도착했습니다. -  "${book_title}" 도서가 등록되었습니다.`,
       html: `
     <div style="font-family: 'Arial', sans-serif; padding: 20px; background-color: #f4f4f9; color: #333;">
       <header style="text-align: center; margin-bottom: 20px;">
@@ -165,8 +162,6 @@ exports.postNewBooks = async (req, res) => {
     });
   } catch (error) {
     console.error('Error adding new book:', error);
-    return res
-      .status(500)
-      .json({ message: 'Failed to add new book.', error: error.message });
+    return res.status(500).json({ message: 'Failed to add new book.', error: error.message });
   }
 };
