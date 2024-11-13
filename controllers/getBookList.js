@@ -25,7 +25,7 @@ exports.getBookList = async (req, res) => {
         b.genre_tag_id,
         b.is_book_best,
         b.book_status,
-        b.book_create_date,
+        TO_CHAR(b.book_create_date, 'YYYY-MM-DD') AS book_create_date, -- 날짜 형식 변경
         CASE 
         WHEN AVG(CASE WHEN br.review_status = 'active' THEN br.rating END) IS NULL THEN 0 
         ELSE ROUND(AVG(CASE WHEN br.review_status = 'active' THEN br.rating END), 1) 
@@ -189,7 +189,7 @@ exports.getTopBooks = async (req, res) => {
         b.genre_tag_id,
         b.is_book_best,
         b.book_status,
-        b.book_create_date,
+         TO_CHAR(b.book_create_date, 'YYYY-MM-DD') AS book_create_date, -- 날짜 형식 변경
         CASE 
           WHEN AVG(CASE WHEN br.review_status = 'active' THEN br.rating END) IS NULL THEN 0 
           ELSE ROUND(AVG(CASE WHEN br.review_status = 'active' THEN br.rating END), 1) 
