@@ -93,7 +93,7 @@ exports.getThreads = async (req, res) => {
     let getThreadsQuery, threadsParams;
 
     if (query) {
-      // query가 있는 경우
+      // query(검색어)가 있는 경우
       getThreadsQuery = `
         SELECT 
           thread.thread_num, 
@@ -111,6 +111,13 @@ exports.getThreads = async (req, res) => {
           thread_main ON thread.thread_num = thread_main.thread_num
         WHERE (book.book_title ILIKE '%' || $1::text || '%' OR book.book_author ILIKE '%' || $1::text || '%') 
           AND thread.thread_status = 'true'
+          AND EXISTS --존재 여부 확인 조건을 만족하는 행이 있으면 트루값 반환 (실제 값 없음)
+          (
+            SELECT 1 
+            FROM thread_main 
+            WHERE thread_main.thread_num = thread.thread_num 
+              AND thread_main.thread_status = true
+          )
         GROUP BY 
           thread.thread_num, 
           book.book_id, 
@@ -122,7 +129,7 @@ exports.getThreads = async (req, res) => {
       `;
       threadsParams = [query, limit, offset];
     } else {
-      // query가 없는 경우
+      // query(검색어)가 없는 경우
       getThreadsQuery = `
         SELECT 
           thread.thread_num, 
@@ -139,6 +146,12 @@ exports.getThreads = async (req, res) => {
         LEFT JOIN 
           thread_main ON thread.thread_num = thread_main.thread_num
         WHERE thread.thread_status = 'true'
+        AND EXISTS (
+            SELECT 1 
+            FROM thread_main 
+            WHERE thread_main.thread_num = thread.thread_num 
+              AND thread_main.thread_status = true
+          )
         GROUP BY 
           thread.thread_num, 
           book.book_id, 
@@ -160,8 +173,32 @@ exports.getThreads = async (req, res) => {
 
     // 전체 스레드 수 계산
     const totalCountQuery = query
-      ? `SELECT COUNT(*) AS total_count FROM thread LEFT JOIN book ON thread.book_id = book.book_id WHERE (book.book_title ILIKE '%' || $1::text || '%' OR book.book_author ILIKE '%' || $1::text || '%') AND thread.thread_status = 'true'`
-      : `SELECT COUNT(*) AS total_count FROM thread WHERE thread.thread_status = 'true'`;
+      ? `
+        SELECT COUNT(*) AS total_count
+        FROM thread
+        LEFT JOIN book ON thread.book_id = book.book_id
+        WHERE
+          (book.book_title ILIKE '%' || $1::text || '%' OR book.book_author ILIKE '%' || $1::text || '%')
+          AND thread.thread_status = 'true'
+          AND EXISTS (
+            SELECT 1 
+            FROM thread_main 
+            WHERE thread_main.thread_num = thread.thread_num 
+              AND thread_main.thread_status = true
+          )
+        `
+      : `
+        SELECT COUNT(*) AS total_count
+        FROM thread
+        WHERE
+          thread.thread_status = 'true'
+          AND EXISTS ( 
+            SELECT 1 
+            FROM thread_main 
+            WHERE thread_main.thread_num = thread.thread_num 
+              AND thread_main.thread_status = true
+          )
+        `;
     const totalCountParams = query ? [query] : [];
     const totalCountResult = await database.query(
       totalCountQuery,
