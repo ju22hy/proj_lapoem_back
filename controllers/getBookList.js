@@ -25,6 +25,7 @@ exports.getBookList = async (req, res) => {
         b.genre_tag_id,
         b.is_book_best,
         b.book_status,
+        b.book_create_date,
         CASE 
         WHEN AVG(CASE WHEN br.review_status = 'active' THEN br.rating END) IS NULL THEN 0 
         ELSE ROUND(AVG(CASE WHEN br.review_status = 'active' THEN br.rating END), 1) 
@@ -188,6 +189,7 @@ exports.getTopBooks = async (req, res) => {
         b.genre_tag_id,
         b.is_book_best,
         b.book_status,
+        b.book_create_date,
         CASE 
           WHEN AVG(CASE WHEN br.review_status = 'active' THEN br.rating END) IS NULL THEN 0 
           ELSE ROUND(AVG(CASE WHEN br.review_status = 'active' THEN br.rating END), 1) 
