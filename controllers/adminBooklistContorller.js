@@ -44,10 +44,10 @@ exports.getAdminBookList = async (req, res) => {
     query += `
     GROUP BY b.book_id
     ORDER BY
-      CASE WHEN b.book_status = true THEN 1 ELSE 0 END DESC,            -- book_status가 true인 책 우선 출력
-      b.book_create_date DESC,                                               -- 최신 등록 날짜 우선 출력
       CASE WHEN b.is_book_best = true THEN 1 ELSE 0 END DESC,           -- 베스트셀러인 책 우선 출력
-      publish_date DESC,                                              -- 최신 출판일 우선 출력
+      CASE WHEN b.book_status = true THEN 1 ELSE 0 END DESC,            -- book_status가 true인 책 우선 출력
+      b.book_create_date DESC,                                          -- 최신 등록 날짜 우선 출력
+      publish_date DESC,                                                -- 최신 출판일 우선 출력
        b.genre_tag_id ASC
     LIMIT $1 OFFSET $2
   `;
