@@ -45,6 +45,8 @@ router.post(
   '/threads/:thread_num/comment/:thread_content_num/reply',
   createThreadReply
 );
+
+// ===================================admin===================================
 // 신간 도서 등록
 router.post('/new-books', postNewBooks);
 

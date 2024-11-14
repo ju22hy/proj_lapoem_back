@@ -45,6 +45,8 @@ const {
 
 const getTerms = require('../controllers/authController').getTerms;
 
+const { getAdminBookList } = require('../controllers/adminBooklistContorller');
+
 // get Url
 router.get('/book-list', getBookList);
 router.get('/book-list/:bookId', getBookDetail);
@@ -79,5 +81,8 @@ router.get('/book-list/:bookId/review-distribution', getReviewDistribution);
 
 // 토큰 검증 라우트
 router.get('/verify', verifyToken);
+
+// ===============admin ================
+router.get('/admin/books', getAdminBookList);
 
 module.exports = router;
