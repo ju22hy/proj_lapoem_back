@@ -28,8 +28,7 @@ exports.postNewBooks = async (req, res) => {
   } = req.body;
 
   // book_price에 "원" 자동 추가
-  const formattedBookPrice =
-    typeof book_price === 'number' ? `${book_price}원` : book_price;
+  const formattedBookPrice = typeof book_price === 'number' ? `${book_price}원` : book_price;
 
   // genre_tag_name과 genre_tag_id 매칭
   const genreMapping = {
@@ -70,9 +69,7 @@ exports.postNewBooks = async (req, res) => {
     !genre_tag_name ||
     !genre_tag_id
   ) {
-    return res
-      .status(400)
-      .json({ message: 'All fields are required or invalid genre_tag_name.' });
+    return res.status(400).json({ message: 'All fields are required or invalid genre_tag_name.' });
   }
 
   try {
@@ -135,7 +132,7 @@ exports.postNewBooks = async (req, res) => {
         html: `
     <div style="font-family: 'Arial', sans-serif; padding: 20px; background-color: #f4f4f9; color: #333;">
       <header style="text-align: center; margin-bottom: 20px;">
-        <img src="https://ibb.co/RDqqnL0" alt="LaPoem Logo" style="width: 150px;">
+        <img src="https://9seebird.site/logo.png" alt="LaPoem Logo" style="width: 150px;">
         <h1 style="font-size: 24px; color: #2c3e50;">신간 도서가 등록되었습니다!</h1>
       </header>
 
@@ -154,7 +151,7 @@ exports.postNewBooks = async (req, res) => {
 
       <footer style="text-align: center; margin-top: 40px; font-size: 16px;">
         <p>더 자세한 정보는 라보엠에 접속하셔서 확인해보세요.</p>
-        <p><a href="https://example.com" style="color: #3498db; text-decoration: none; font-weight: bold;">라보엠 사이트 방문하기</a></p>
+        <p><a href="http://222.112.27.120:3002" style="color: #3498db; text-decoration: none; font-weight: bold;">라보엠 사이트 방문하기</a></p>
       </footer>
     </div>
   `,
@@ -173,8 +170,6 @@ exports.postNewBooks = async (req, res) => {
     });
   } catch (error) {
     console.error('Error adding new book:', error);
-    return res
-      .status(500)
-      .json({ message: 'Failed to add new book.', error: error.message });
+    return res.status(500).json({ message: 'Failed to add new book.', error: error.message });
   }
 };
