@@ -36,6 +36,7 @@ const {
   getThreads,
   checkThreadExistence,
   searchThreads,
+  getThreadBookList,
 } = require('../controllers/threadController');
 const {
   getThreadDetail,
@@ -78,6 +79,7 @@ router.get(
   getMemberNicknames
 );
 router.get('/book-list/:bookId/review-distribution', getReviewDistribution);
+router.get('/new_thread', getThreadBookList);
 
 // 토큰 검증 라우트
 router.get('/verify', verifyToken);
