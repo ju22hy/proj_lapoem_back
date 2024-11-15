@@ -20,6 +20,9 @@ const getBookDetail = async (req, res) => {
             b.book_title,
             b.book_author,
             b.genre_tag_name,
+            TO_CHAR(b.book_create_date, 'YYYY.MM.DD') AS book_create_date,
+            TO_CHAR(b.book_update_date, 'YYYY.MM.DD') AS book_update_date,
+            TO_CHAR(b.book_delete_date, 'YYYY.MM.DD') AS book_delete_date,
             CASE 
               WHEN AVG(br.rating) IS NULL THEN 0 
               ELSE ROUND(AVG(br.rating), 1) 
